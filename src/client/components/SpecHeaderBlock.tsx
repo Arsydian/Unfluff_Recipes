@@ -1,14 +1,12 @@
 /**
  * ============================================================================
- * CAD Specification Title Block Header Component
+ * Streamlined Specification Header Block Component (Retro-Modern)
  * ----------------------------------------------------------------------------
- * Renders an engineering title block above the TRN matrix containing:
- *   - Editable Recipe Title & Description
- *   - Document ID, Revision, Active Scale Yield, Parser Confidence
- *   - Prep / Cook / Total Duration Breakdown
- *   - Consolidated Cookware / Hardware Checklist (editable tags)
- *   - Critical Target Temperatures (live-converted between °F and °C)
- *   - 14-day Share Retention Status when loaded from a permalink
+ * Clean two-tier technical manual header:
+ *   - Top tier: Editable recipe title & description alongside a compact KPI
+ *     strip (Yield, Prep, Cook, Total, Doc ID).
+ *   - Bottom tier: Equipment chips (with toggleable `+` adder), live-converted
+ *     target temperatures, and safe HTTP(S) source link.
  * ============================================================================
  */
 
@@ -26,7 +24,7 @@ interface SpecHeaderBlockProps {
 }
 
 /**
- * Formats scaled yield label cleanly (e.g., "24 cookies" * 2 -> "48 cookies (2x)").
+ * Formats scaled yield cleanly (e.g., "24 cookies" * 2 -> "48 cookies (2x)").
  */
 function formatScaledYield(
   baseServings: number,
@@ -38,11 +36,22 @@ function formatScaledYield(
   }
   const scaledCount = Number((baseServings * scaleFactor).toFixed(1));
   const unitPart = yieldLabel.replace(/^\d+(?:\.\d+)?\s*/, '').trim() || 'servings';
-  return `${scaledCount} ${unitPart} (${scaleFactor}x)`;
+  return `${scaledCount} ${unitPart} (${scaleFactor}×)`;
 }
 
 /**
- * CAD-style header table displaying recipe engineering metadata & mise en place.
+ * Extracts a compact hostname label for displaying the source URL cleanly.
+ */
+function formatSourceHost(rawUrl: string): string {
+  try {
+    return new URL(rawUrl).hostname.replace(/^www\./i, '');
+  } catch {
+    return rawUrl;
+  }
+}
+
+/**
+ * Renders the uncluttered retro-modern specification header above the TRN grid.
  */
 export const SpecHeaderBlock: React.FC<SpecHeaderBlockProps> = ({
   document: doc,
@@ -52,6 +61,7 @@ export const SpecHeaderBlock: React.FC<SpecHeaderBlockProps> = ({
   onAddHardware,
   onRemoveHardware,
 }) => {
+  const [addingHw, setAddingHw] = useState(false);
   const [newHw, setNewHw] = useState('');
 
   const handleAddHw = (e: React.FormEvent) => {
@@ -59,6 +69,7 @@ export const SpecHeaderBlock: React.FC<SpecHeaderBlockProps> = ({
     if (!newHw.trim()) return;
     onAddHardware(newHw.trim());
     setNewHw('');
+    setAddingHw(false);
   };
 
   const { metadata } = doc;
@@ -67,154 +78,148 @@ export const SpecHeaderBlock: React.FC<SpecHeaderBlockProps> = ({
   );
 
   return (
-    <table className="spec-title-block" aria-label="Recipe Engineering Spec Header">
-      <tbody>
-        <tr>
-          <td colSpan={3} className="spec-title-cell">
-            <span className="spec-cell-label">SPECIFICATION TITLE (CLICK TO EDIT)</span>
-            <h1
-              className="spec-recipe-title"
-              contentEditable
-              suppressContentEditableWarning
-              onBlur={(e) => {
-                const updated = e.currentTarget.textContent?.trim();
-                if (updated && updated !== doc.title) {
-                  onUpdateTitle(updated);
-                }
-              }}
-            >
-              {doc.title}
-            </h1>
-            {doc.description && (
-              <div className="spec-recipe-desc">{doc.description}</div>
-            )}
-          </td>
-          <td>
-            <span className="spec-cell-label">DOC NO. / REV</span>
-            <div className="spec-mono-value">
-              {metadata.docNumber} / {metadata.revision}
-            </div>
-            <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
-              Engine: {metadata.parserEngine.toUpperCase()} ({Math.round(metadata.confidenceScore * 100)}%)
-            </div>
-          </td>
-        </tr>
+    <header className="spec-header" aria-label="Recipe Engineering Spec Header">
+      <div className="spec-header-top">
+        <div className="spec-title-col">
+          <h1
+            className="spec-recipe-title"
+            contentEditable
+            suppressContentEditableWarning
+            title="Click to edit recipe title"
+            onBlur={(e) => {
+              const updated = e.currentTarget.textContent?.trim();
+              if (updated && updated !== doc.title) {
+                onUpdateTitle(updated);
+              }
+            }}
+          >
+            {doc.title}
+          </h1>
+          {doc.description && (
+            <div className="spec-recipe-desc">{doc.description}</div>
+          )}
+        </div>
 
-        <tr>
-          <td>
-            <span className="spec-cell-label">SCALED YIELD</span>
-            <div className="spec-mono-value">
+        <div className="spec-kpi-grid">
+          <div className="spec-kpi-item">
+            <span className="spec-kpi-label">YIELD</span>
+            <span className="spec-kpi-value">
               {formatScaledYield(metadata.baseServings, metadata.yieldLabel, scaleFactor)}
+            </span>
+          </div>
+          {metadata.prepTime && (
+            <div className="spec-kpi-item">
+              <span className="spec-kpi-label">PREP</span>
+              <span className="spec-kpi-value">{metadata.prepTime}</span>
             </div>
-          </td>
-          <td>
-            <span className="spec-cell-label">PREP / COOK / TOTAL TIME</span>
-            <div className="spec-mono-value">
-              {[
-                metadata.prepTime ? `Prep: ${metadata.prepTime}` : null,
-                metadata.cookTime ? `Cook: ${metadata.cookTime}` : null,
-                metadata.totalTime ? `Total: ${metadata.totalTime}` : null,
-              ]
-                .filter(Boolean)
-                .join(' | ') || 'Not specified'}
+          )}
+          {metadata.cookTime && (
+            <div className="spec-kpi-item">
+              <span className="spec-kpi-label">COOK</span>
+              <span className="spec-kpi-value">{metadata.cookTime}</span>
             </div>
-          </td>
-          <td>
-            <span className="spec-cell-label">CRITICAL TARGET TEMPS</span>
-            <div className="spec-chip-list">
-              {convertedTemps.length > 0 ? (
-                convertedTemps.map((t, idx) => (
-                  <span key={`${t}-${idx}`} className="spec-chip temp">
-                    {t}
-                  </span>
-                ))
-              ) : (
-                <span className="spec-mono-value" style={{ color: '#64748b' }}>
-                  Ambient / Stovetop
-                </span>
-              )}
+          )}
+          {metadata.totalTime && (
+            <div className="spec-kpi-item">
+              <span className="spec-kpi-label">TOTAL</span>
+              <span className="spec-kpi-value">{metadata.totalTime}</span>
             </div>
-          </td>
-          <td>
-            <span className="spec-cell-label">RETENTION / SOURCE</span>
-            <div className="spec-mono-value" style={{ fontSize: 11 }}>
-              {metadata.expiresAt
-                ? `Expires: ${new Date(metadata.expiresAt).toLocaleDateString()}`
-                : 'Active Draft (14d on share)'}
-            </div>
-            {metadata.sourceUrl && /^https?:\/\//i.test(metadata.sourceUrl) && (
-              <div
-                style={{
-                  fontSize: 10,
-                  maxWidth: 220,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+          )}
+          <div className="spec-kpi-item">
+            <span className="spec-kpi-label">SPEC ID</span>
+            <span className="spec-kpi-value">{metadata.docNumber}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="spec-meta-strip">
+        <div className="spec-chip-list">
+          <span className="spec-strip-label">Equipment:</span>
+          {metadata.hardware.map((hw) => (
+            <span key={hw} className="spec-chip">
+              {hw}
+              <button
+                type="button"
+                className="spec-chip-remove no-export"
+                onClick={() => onRemoveHardware(hw)}
+                title={`Remove ${hw}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          {addingHw ? (
+            <form
+              onSubmit={handleAddHw}
+              className="no-export"
+              style={{ display: 'inline-flex', gap: 4 }}
+            >
+              <input
+                type="text"
+                autoFocus
+                value={newHw}
+                onChange={(e) => setNewHw(e.target.value)}
+                onBlur={() => {
+                  if (!newHw.trim()) setAddingHw(false);
                 }}
-              >
-                <a
-                  href={metadata.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: '#003366' }}
-                >
-                  {metadata.sourceUrl}
-                </a>
-              </div>
-            )}
-          </td>
-        </tr>
+                placeholder="Tool name"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 11,
+                  padding: '2px 6px',
+                  width: 110,
+                  border: '1px solid var(--border-ink)',
+                  borderRadius: 3,
+                }}
+              />
+              <button type="submit" className="retro-btn-mini">
+                Add
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              className="retro-btn-mini no-export"
+              onClick={() => setAddingHw(true)}
+              title="Add cookware or tool"
+            >
+              +
+            </button>
+          )}
 
-        <tr>
-          <td colSpan={4}>
-            <span className="spec-cell-label">REQUIRED HARDWARE / MISE EN PLACE</span>
-            <div className="spec-chip-list">
-              {metadata.hardware.length > 0 ? (
-                metadata.hardware.map((hw) => (
-                  <span key={hw} className="spec-chip">
-                    {hw}
-                    <button
-                      type="button"
-                      className="spec-chip-remove no-export"
-                      onClick={() => onRemoveHardware(hw)}
-                      title={`Remove ${hw}`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))
-              ) : (
-                <span className="spec-mono-value" style={{ color: '#64748b' }}>
-                  Standard kitchen prep tools
+          {convertedTemps.length > 0 && (
+            <>
+              <span className="spec-strip-label" style={{ marginLeft: 8 }}>
+                Temps:
+              </span>
+              {convertedTemps.map((t, idx) => (
+                <span key={`${t}-${idx}`} className="spec-chip temp">
+                  {t}
                 </span>
-              )}
+              ))}
+            </>
+          )}
+        </div>
 
-              <form
-                onSubmit={handleAddHw}
-                className="no-export"
-                style={{ display: 'inline-flex', gap: 3, marginLeft: 4 }}
-              >
-                <input
-                  type="text"
-                  value={newHw}
-                  onChange={(e) => setNewHw(e.target.value)}
-                  placeholder="+ hardware"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 11,
-                    padding: '1px 5px',
-                    width: 96,
-                    border: '1px solid #94a3b8',
-                  }}
-                />
-                <button type="submit" className="retro-btn-mini">
-                  Add
-                </button>
-              </form>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {metadata.expiresAt && (
+            <span className="spec-strip-label">
+              Expires {new Date(metadata.expiresAt).toLocaleDateString()}
+            </span>
+          )}
+          {metadata.sourceUrl && /^https?:\/\//i.test(metadata.sourceUrl) && (
+            <a
+              href={metadata.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="spec-source-link"
+              title={metadata.sourceUrl}
+            >
+              Source: {formatSourceHost(metadata.sourceUrl)} ↗
+            </a>
+          )}
+        </div>
+      </div>
+    </header>
   );
 };

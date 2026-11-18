@@ -1,14 +1,13 @@
 /**
  * ============================================================================
- * Classic Nested TRN Dependency Grid Table Component
+ * Classic Nested TRN Dependency Grid Table Component (Retro-Modern)
  * ----------------------------------------------------------------------------
- * Renders the iconic "Cooking for Engineers" merged-cell dependency matrix:
- *   - Left columns: Row Tools (hidden in PDF), Scaled Qty, Unit, Ingredient/Prep
- *   - Right columns: Topological merged `rowSpan` / `colSpan` operation cells
- *     computed by `buildTrnGridMatrix(doc)`.
- *   - Inline `contenteditable` editing across ingredient names, prep notes,
- *     instructions, and sub-assembly labels.
- *   - Kitchen Bench Mode click-to-complete step & ingredient dimming.
+ * Renders the "Cooking for Engineers" merged-cell dependency matrix with a
+ * clean layout:
+ *   - Combined right-aligned monospace `AMOUNT` column (`displayQty + displayUnit`)
+ *   - `INGREDIENT` column with hover-revealed row controls (`↑`, `↓`, `÷2`, `×`)
+ *   - Right topological merged `rowSpan` / `colSpan` operation cells
+ *   - Inline `contenteditable` editing & Cook Mode tap-to-complete dimming
  * ============================================================================
  */
 
@@ -43,7 +42,7 @@ interface NestedTrnTableProps {
 }
 
 /**
- * Renders the merged-cell Tabular Recipe Notation (TRN) engineering table.
+ * Renders the decluttered retro-modern Nested TRN matrix table.
  */
 export const NestedTrnTable: React.FC<NestedTrnTableProps> = ({
   document: doc,
@@ -65,10 +64,8 @@ export const NestedTrnTable: React.FC<NestedTrnTableProps> = ({
       <table className="trn-table" aria-label="Nested Tabular Recipe Notation Matrix">
         <thead>
           <tr>
-            <th className="trn-row-tools-col no-export">ROW OPS</th>
-            <th style={{ textAlign: 'right' }}>QTY</th>
-            <th>UNIT</th>
-            <th>INGREDIENT / PREP SPEC</th>
+            <th style={{ textAlign: 'right' }}>AMOUNT</th>
+            <th>INGREDIENT</th>
             {Array.from({ length: matrix.columnCount }, (_v, cIdx) => (
               <th key={cIdx}>STAGE {cIdx + 1}</th>
             ))}
@@ -81,6 +78,7 @@ export const NestedTrnTable: React.FC<NestedTrnTableProps> = ({
               scaleFactor,
               unitSystem
             );
+            const amountText = [displayQty, displayUnit].filter(Boolean).join(' ');
             const rowCells = matrix.cellsByRow[rowIndex] || [];
 
             return (
@@ -88,104 +86,108 @@ export const NestedTrnTable: React.FC<NestedTrnTableProps> = ({
                 key={row.id}
                 className={row.completed ? 'trn-row-done' : ''}
               >
-                <td className="trn-row-tools-col no-export">
-                  <button
-                    type="button"
-                    className="retro-btn-mini"
-                    onClick={() => onMoveIngredient(row.id, -1)}
-                    disabled={rowIndex === 0}
-                    title="Move row up"
-                  >
-                    ↑
-                  </button>{' '}
-                  <button
-                    type="button"
-                    className="retro-btn-mini"
-                    onClick={() => onMoveIngredient(row.id, 1)}
-                    disabled={rowIndex === doc.ingredients.length - 1}
-                    title="Move row down"
-                  >
-                    ↓
-                  </button>{' '}
-                  <button
-                    type="button"
-                    className="retro-btn-mini"
-                    onClick={() => onSplitIngredient(row.id)}
-                    title="Split into two divided rows"
-                  >
-                    ÷2
-                  </button>{' '}
-                  <button
-                    type="button"
-                    className="retro-btn-mini"
-                    onClick={() => onRemoveIngredient(row.id)}
-                    disabled={doc.ingredients.length <= 1}
-                    title="Remove row"
-                  >
-                    ×
-                  </button>
-                </td>
-
                 <td
-                  className={`trn-qty-cell ${benchMode ? 'bench-clickable' : ''}`}
+                  className={`trn-amount-cell ${benchMode ? 'bench-clickable' : ''}`}
                   onClick={benchMode ? () => onToggleIngredientDone(row.id) : undefined}
                   title={benchMode ? 'Click to mark ingredient prepped' : undefined}
                 >
-                  {displayQty}
-                </td>
-
-                <td
-                  className={`trn-unit-cell ${benchMode ? 'bench-clickable' : ''}`}
-                  onClick={benchMode ? () => onToggleIngredientDone(row.id) : undefined}
-                >
-                  {displayUnit}
+                  {amountText}
                 </td>
 
                 <td
                   className={`trn-ing-cell ${benchMode ? 'bench-clickable' : ''}`}
                   onClick={benchMode ? () => onToggleIngredientDone(row.id) : undefined}
                 >
-                  {row.completed && <span className="done-stamp" style={{ marginRight: 5 }}>DONE</span>}
-                  <span
-                    className="trn-ing-name"
-                    contentEditable={!benchMode}
-                    suppressContentEditableWarning
-                    onClick={(e) => {
-                      if (!benchMode) e.stopPropagation();
-                    }}
-                    onBlur={(e) => {
-                      const val = e.currentTarget.textContent?.trim();
-                      if (val && val !== row.name) {
-                        onUpdateIngredientField(row.id, 'name', val);
-                      }
-                    }}
-                  >
-                    {row.name}
-                  </span>
-                  {(row.prepNote || !benchMode) && (
-                    <span
-                      className="trn-prep-note"
-                      contentEditable={!benchMode}
-                      suppressContentEditableWarning
-                      onClick={(e) => {
-                        if (!benchMode) e.stopPropagation();
-                      }}
-                      onBlur={(e) => {
-                        const rawText = e.currentTarget.textContent?.trim() || '';
-                        const cleaned = rawText.replace(/^,\s*/, '');
-                        if (cleaned !== row.prepNote) {
-                          onUpdateIngredientField(row.id, 'prepNote', cleaned);
-                        }
-                      }}
-                    >
-                      {row.prepNote ? `, ${row.prepNote}` : ''}
-                    </span>
-                  )}
-                  {row.isDividedSplit && (
-                    <span className="divided-badge">
-                      SPLIT{row.dividedPartLabel ? `: ${row.dividedPartLabel}` : ''}
-                    </span>
-                  )}
+                  <div className="trn-ing-row-wrap">
+                    <div className="trn-ing-main">
+                      {row.completed && (
+                        <span className="done-stamp" style={{ marginRight: 6 }}>
+                          DONE
+                        </span>
+                      )}
+                      <span
+                        className="trn-ing-name"
+                        contentEditable={!benchMode}
+                        suppressContentEditableWarning
+                        onClick={(e) => {
+                          if (!benchMode) e.stopPropagation();
+                        }}
+                        onBlur={(e) => {
+                          const val = e.currentTarget.textContent?.trim();
+                          if (val && val !== row.name) {
+                            onUpdateIngredientField(row.id, 'name', val);
+                          }
+                        }}
+                      >
+                        {row.name}
+                      </span>
+                      {(row.prepNote || !benchMode) && (
+                        <span
+                          className="trn-prep-note"
+                          contentEditable={!benchMode}
+                          suppressContentEditableWarning
+                          onClick={(e) => {
+                            if (!benchMode) e.stopPropagation();
+                          }}
+                          onBlur={(e) => {
+                            const rawText = e.currentTarget.textContent?.trim() || '';
+                            const cleaned = rawText.replace(/^,\s*/, '');
+                            if (cleaned !== row.prepNote) {
+                              onUpdateIngredientField(row.id, 'prepNote', cleaned);
+                            }
+                          }}
+                        >
+                          {row.prepNote ? `, ${row.prepNote}` : ''}
+                        </span>
+                      )}
+                      {row.isDividedSplit && (
+                        <span className="divided-badge">SPLIT</span>
+                      )}
+                    </div>
+
+                    {!benchMode && (
+                      <div
+                        className="row-hover-actions no-export"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          className="retro-btn-mini"
+                          onClick={() => onMoveIngredient(row.id, -1)}
+                          disabled={rowIndex === 0}
+                          title="Move row up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="retro-btn-mini"
+                          onClick={() => onMoveIngredient(row.id, 1)}
+                          disabled={rowIndex === doc.ingredients.length - 1}
+                          title="Move row down"
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          className="retro-btn-mini"
+                          onClick={() => onSplitIngredient(row.id)}
+                          title="Split into two divided rows"
+                        >
+                          ÷2
+                        </button>
+                        <button
+                          type="button"
+                          className="retro-btn-mini"
+                          onClick={() => onRemoveIngredient(row.id)}
+                          disabled={doc.ingredients.length <= 1}
+                          title="Remove row"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </td>
 
                 {rowCells.map((cell) => {
@@ -198,7 +200,7 @@ export const NestedTrnTable: React.FC<NestedTrnTableProps> = ({
                         className="trn-passthrough-cell"
                         title="Ingredient enters downstream"
                       >
-                        ───▶
+                        ───
                       </td>
                     );
                   }
@@ -227,7 +229,7 @@ export const NestedTrnTable: React.FC<NestedTrnTableProps> = ({
                       title={
                         benchMode
                           ? 'Click to toggle step completion'
-                          : 'Click text to edit inline before PDF export'
+                          : 'Click text to edit inline'
                       }
                     >
                       <div className="trn-action-header">
@@ -258,7 +260,7 @@ export const NestedTrnTable: React.FC<NestedTrnTableProps> = ({
                         {convertedInstruction}
                       </div>
 
-                      {(convertedTemp || node.duration || (node.hardware && node.hardware.length > 0)) && (
+                      {(convertedTemp || node.duration) && (
                         <div className="trn-action-params">
                           {convertedTemp && (
                             <span className="param-pill temp">{convertedTemp}</span>
@@ -266,11 +268,6 @@ export const NestedTrnTable: React.FC<NestedTrnTableProps> = ({
                           {node.duration && (
                             <span className="param-pill">{node.duration}</span>
                           )}
-                          {node.hardware?.map((hw) => (
-                            <span key={hw} className="param-pill">
-                              {hw}
-                            </span>
-                          ))}
                         </div>
                       )}
 
@@ -282,13 +279,13 @@ export const NestedTrnTable: React.FC<NestedTrnTableProps> = ({
                           if (!benchMode) e.stopPropagation();
                         }}
                         onBlur={(e) => {
-                          const val = e.currentTarget.textContent?.replace(/^⇒\s*/, '').trim();
+                          const val = e.currentTarget.textContent?.replace(/^→\s*/, '').trim();
                           if (val && val !== node.outputLabel) {
                             onUpdateActionField(node.id, 'outputLabel', val);
                           }
                         }}
                       >
-                        ⇒ {node.outputLabel}
+                        → {node.outputLabel}
                       </div>
                     </td>
                   );

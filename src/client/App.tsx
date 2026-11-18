@@ -75,6 +75,7 @@ export const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<TrnViewMode>('nested');
   const [scaleFactor, setScaleFactor] = useState<number>(1);
   const [unitSystem, setUnitSystem] = useState<UnitSystem>('original');
+  const [inputCollapsed, setInputCollapsed] = useState<boolean>(true);
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -205,6 +206,7 @@ export const App: React.FC = () => {
     setShareExpiresAt(compiled.metadata.expiresAt || null);
     setWarnings(newWarnings);
     setErrorMessage(null);
+    setInputCollapsed(true);
   };
 
   const handleParseUrl = async (url: string, preferAi: boolean) => {
@@ -405,21 +407,19 @@ export const App: React.FC = () => {
     <div className="app-shell">
       <HeaderSpecBar
         hasDocument={Boolean(doc)}
+        inputCollapsed={inputCollapsed}
         edgeCapabilities={edgeCapabilities}
-        onResetWorkspace={() => {
-          setDoc(null);
-          setOriginalDoc(null);
-          setShareUrl(null);
-          setErrorMessage(null);
-          setWarnings([]);
-          window.history.replaceState(null, '', '/');
-        }}
+        onToggleInputPanel={() => setInputCollapsed((prev) => !prev)}
       />
 
       <RecipeInputPanel
         loading={loading}
+        hasDocument={Boolean(doc)}
+        isCollapsed={inputCollapsed}
         errorMessage={errorMessage}
         warnings={warnings}
+        onExpand={() => setInputCollapsed(false)}
+        onCollapse={() => setInputCollapsed(true)}
         onParseUrl={handleParseUrl}
         onParseRawText={handleParseRawText}
         onLoadPreset={handleLoadPreset}

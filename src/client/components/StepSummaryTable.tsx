@@ -104,9 +104,9 @@ export const StepSummaryTable: React.FC<StepSummaryTableProps> = ({
                 <td
                   style={{
                     fontFamily: 'var(--font-mono)',
-                    fontWeight: 'bold',
+                    fontWeight: 700,
                     textAlign: 'center',
-                    background: '#f8fafc',
+                    background: 'var(--bg-subtle)',
                   }}
                 >
                   {row.completed ? (
@@ -156,9 +156,9 @@ export const StepSummaryTable: React.FC<StepSummaryTableProps> = ({
                 <td
                   style={{
                     fontFamily: 'var(--font-mono)',
-                    fontWeight: 'bold',
-                    color: '#003366',
-                    background: '#eef3f9',
+                    fontWeight: 700,
+                    color: 'var(--ink-primary)',
+                    background: 'var(--bg-accent-soft)',
                   }}
                   contentEditable={!benchMode}
                   suppressContentEditableWarning

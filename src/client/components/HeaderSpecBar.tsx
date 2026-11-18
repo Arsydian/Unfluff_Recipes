@@ -1,65 +1,69 @@
 /**
  * ============================================================================
- * Header Spec Bar Component
+ * Header Bar Component (Retro-Modern)
  * ----------------------------------------------------------------------------
- * Renders the early-2000s engineering application titlebar with the dynamic
- * build version badge read from `window.api.appVersion`, parser telemetry,
- * and reset navigation.
+ * Minimalist single-line workstation header displaying the TRN monogram,
+ * live `window.api.appVersion` pill, edge capability indicator, and quick
+ * importer toggle.
  * ============================================================================
  */
 
 import React from 'react';
-import { APP_CODENAME, APP_VERSION } from '../../shared/version';
+import { APP_VERSION } from '../../shared/version';
 
 interface HeaderSpecBarProps {
-  /** Whether an active recipe is loaded on the blueprint canvas. */
   hasDocument: boolean;
-  /** Current runtime capabilities fetched from `/api/health`. */
+  inputCollapsed: boolean;
   edgeCapabilities: { ai: boolean; kv: boolean };
-  /** Callback to return to a clean workspace. */
-  onResetWorkspace: () => void;
+  onToggleInputPanel: () => void;
 }
 
 /**
- * Displays the top workstation titlebar and live `window.api.appVersion` badge.
+ * Renders the simplified retro-modern top header bar.
  */
 export const HeaderSpecBar: React.FC<HeaderSpecBarProps> = ({
   hasDocument,
+  inputCollapsed,
   edgeCapabilities,
-  onResetWorkspace,
+  onToggleInputPanel,
 }) => {
   const version =
     typeof window !== 'undefined' && window.api?.appVersion
       ? window.api.appVersion
       : APP_VERSION;
 
+  const isEdgeConnected = edgeCapabilities.ai || edgeCapabilities.kv;
+
   return (
-    <header className="retro-window no-print">
-      <div className="retro-titlebar">
-        <div className="retro-titlebar-left">
-          <span className="retro-logo-mark">TRN-CAD</span>
-          <span className="retro-title-text">
-            UNFLUFFRECIPES // TABULAR RECIPE NOTATION COMPILER
-          </span>
+    <header className="app-header-bar no-print">
+      <div className="header-brand">
+        <span className="retro-logo-mark">TRN</span>
+        <div>
+          <span className="header-title">UnfluffRecipes</span>
+          <span className="header-subtitle">Tabular Recipe Notation</span>
         </div>
-        <div className="retro-titlebar-right">
-          <span className="version-badge" title="Build version synchronized via window.api.appVersion">
-            v{version} ({APP_CODENAME})
-          </span>
-          <span className="status-pill">
-            AI:{edgeCapabilities.ai ? 'ON' : 'HEURISTIC'} | KV:{edgeCapabilities.kv ? 'ON' : 'TOKEN'}
-          </span>
-          {hasDocument && (
-            <button
-              type="button"
-              className="retro-btn"
-              onClick={onResetWorkspace}
-              title="Clear current specification sheet"
-            >
-              [New Spec]
-            </button>
-          )}
-        </div>
+      </div>
+
+      <div className="header-meta">
+        <span className="version-badge" title="Build version from window.api.appVersion">
+          v{version}
+        </span>
+        <span
+          className="status-dot-pill"
+          title={`Workers AI: ${edgeCapabilities.ai ? 'bound' : 'fallback'} | KV: ${edgeCapabilities.kv ? 'bound' : 'signed-token'}`}
+        >
+          <span className={`status-dot ${isEdgeConnected ? '' : 'local'}`} />
+          {edgeCapabilities.ai ? 'Edge + AI' : 'Heuristic'}
+        </span>
+        {hasDocument && (
+          <button
+            type="button"
+            className="retro-btn subtle"
+            onClick={onToggleInputPanel}
+          >
+            {inputCollapsed ? '+ Import Recipe' : 'Hide Importer'}
+          </button>
+        )}
       </div>
     </header>
   );
