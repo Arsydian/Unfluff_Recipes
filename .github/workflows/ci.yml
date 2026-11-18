@@ -1,0 +1,43 @@
+# ==============================================================================
+# GitHub Actions CI — Automated Cloud Typecheck, Unit Tests & Production Build
+# Runs automatically on every push to GitHub (zero local CLI required).
+# ==============================================================================
+
+name: CI Verification
+
+on:
+  push:
+    branches: ['*']
+  pull_request:
+    branches: ['*']
+
+jobs:
+  verify:
+    name: Typecheck, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: TypeScript Strict Check
+        run: npm run typecheck
+
+      - name: Run Vitest Suite
+        run: npm test
+
+      - name: Build Production Bundle
+        run: npm run build

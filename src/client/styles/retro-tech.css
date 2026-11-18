@@ -1,0 +1,810 @@
+/**
+ * ============================================================================
+ * UnfluffRecipes - Early-2000s Technical Web + CAD Spec Sheet Stylesheet
+ * ----------------------------------------------------------------------------
+ * Implements:
+ *   - Classic Windows-2000 / early engineering web bevelled chrome & navy bars
+ *   - High-contrast 1px solid #000 Tabular Recipe Notation (TRN) blueprint grid
+ *   - Monospace measurement alignment & subtle passthrough tracks
+ *   - Kitchen Bench Mode active/completed dimming & wake-lock status badges
+ *   - Precision @media print & .pdf-exporting rules stripping non-spec UI
+ * ============================================================================
+ */
+
+:root {
+  --bg-canvas: #cfd6df;
+  --bg-panel: #ece9d8;
+  --bg-sheet: #ffffff;
+  --bg-blueprint-tint: #eef3f9;
+  --bg-header-navy: #003366;
+  --bg-header-accent: #1b4d89;
+  --bg-cell-hover: #ffffe1;
+  --bg-cell-edit: #fff9c4;
+  --bg-done: #e4e7ec;
+  --border-dark: #404040;
+  --border-mid: #808080;
+  --border-light: #ffffff;
+  --border-grid: #000000;
+  --text-main: #111111;
+  --text-muted: #4a5568;
+  --accent-red: #b91c1c;
+  --accent-green: #166534;
+  --font-ui: 'Tahoma', 'Verdana', 'Geneva', sans-serif;
+  --font-mono: 'Courier New', 'Lucida Console', 'Consolas', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-canvas);
+  background-image: linear-gradient(
+      to right,
+      rgba(0, 51, 102, 0.05) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgba(0, 51, 102, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.app-shell {
+  max-width: 1320px;
+  margin: 12px auto 32px auto;
+  padding: 0 12px;
+}
+
+/* ============================================================================
+ * Classic Bevelled Early-2000s Panels & Buttons
+ * ============================================================================ */
+
+.retro-window {
+  background: var(--bg-panel);
+  border-top: 2px solid var(--border-light);
+  border-left: 2px solid var(--border-light);
+  border-right: 2px solid var(--border-dark);
+  border-bottom: 2px solid var(--border-dark);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.18);
+  margin-bottom: 12px;
+}
+
+.retro-titlebar {
+  background: linear-gradient(90deg, var(--bg-header-navy) 0%, var(--bg-header-accent) 100%);
+  color: #ffffff;
+  padding: 6px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid #000000;
+}
+
+.retro-titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.retro-logo-mark {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-weight: bold;
+  font-size: 12px;
+  background: #ffffff;
+  color: var(--bg-header-navy);
+  padding: 1px 6px;
+  border: 1px solid #000000;
+}
+
+.retro-title-text {
+  font-weight: bold;
+  font-size: 14px;
+  letter-spacing: 0.4px;
+}
+
+.retro-titlebar-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.version-badge {
+  background: #ffffcc;
+  color: #000000;
+  border: 1px solid #000000;
+  padding: 1px 6px;
+  font-weight: bold;
+}
+
+.status-pill {
+  background: #dbeafe;
+  color: #002244;
+  border: 1px solid #000000;
+  padding: 1px 6px;
+}
+
+.retro-btn {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: bold;
+  color: #000000;
+  background: #e2dfd5;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-top: 2px solid var(--border-light);
+  border-left: 2px solid var(--border-light);
+  border-right: 2px solid var(--border-dark);
+  border-bottom: 2px solid var(--border-dark);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+}
+
+.retro-btn:hover:not(:disabled) {
+  background: #ece9de;
+}
+
+.retro-btn:active:not(:disabled),
+.retro-btn.active {
+  background: #d0d9e6;
+  border-top: 2px solid var(--border-dark);
+  border-left: 2px solid var(--border-dark);
+  border-right: 2px solid var(--border-light);
+  border-bottom: 2px solid var(--border-light);
+}
+
+.retro-btn.primary {
+  background: #003366;
+  color: #ffffff;
+  border-top: 2px solid #4d88c4;
+  border-left: 2px solid #4d88c4;
+  border-right: 2px solid #001429;
+  border-bottom: 2px solid #001429;
+}
+
+.retro-btn.primary:hover:not(:disabled) {
+  background: #0b4885;
+}
+
+.retro-btn.bench-on {
+  background: #dcfce7;
+  color: #14532d;
+  border-color: #166534;
+}
+
+.retro-btn:disabled {
+  color: #666666;
+  cursor: not-allowed;
+}
+
+.retro-btn-mini {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 5px;
+  background: #e8e6dc;
+  border: 1px solid #555555;
+  cursor: pointer;
+}
+
+.retro-btn-mini:hover {
+  background: #ffffcc;
+}
+
+/* ============================================================================
+ * Input Tabs & Forms
+ * ============================================================================ */
+
+.retro-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 8px 10px 0 10px;
+  border-bottom: 1px solid var(--border-dark);
+  background: #dcd8c8;
+}
+
+.retro-tab {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: bold;
+  padding: 5px 12px;
+  background: #c9c4b3;
+  border-top: 2px solid var(--border-light);
+  border-left: 2px solid var(--border-light);
+  border-right: 2px solid var(--border-dark);
+  border-bottom: none;
+  cursor: pointer;
+  color: #222222;
+}
+
+.retro-tab.active {
+  background: var(--bg-panel);
+  color: #003366;
+  position: relative;
+  top: 1px;
+  padding-bottom: 6px;
+}
+
+.retro-panel-body {
+  padding: 12px;
+}
+
+.input-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.retro-input,
+.retro-textarea,
+.retro-select {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: #ffffff;
+  color: #000000;
+  border-top: 2px solid var(--border-dark);
+  border-left: 2px solid var(--border-dark);
+  border-right: 2px solid var(--border-light);
+  border-bottom: 2px solid var(--border-light);
+  padding: 6px 8px;
+}
+
+.retro-input {
+  flex: 1 1 320px;
+}
+
+.retro-textarea {
+  width: 100%;
+  min-height: 150px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+}
+
+.preset-card {
+  text-align: left;
+  background: #ffffff;
+  border: 1px solid #000000;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.preset-card:hover {
+  background: var(--bg-cell-hover);
+}
+
+.preset-card-title {
+  font-weight: bold;
+  color: #003366;
+  margin-bottom: 3px;
+}
+
+.preset-card-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.notice-bar {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid #000000;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: #fffbeb;
+  color: #78350f;
+}
+
+.notice-bar.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #991b1b;
+}
+
+.notice-bar.success {
+  background: #f0fdf4;
+  color: #14532d;
+  border-color: #166534;
+}
+
+/* ============================================================================
+ * Control Toolbar & Share Banner
+ * ============================================================================ */
+
+.toolbar-bar {
+  padding: 8px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.toolbar-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: bold;
+  color: #333333;
+  text-transform: uppercase;
+  margin-right: 2px;
+}
+
+.scale-custom-input {
+  width: 58px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 3px 5px;
+  border: 1px solid #404040;
+  background: #ffffff;
+  text-align: center;
+}
+
+.share-banner {
+  margin: 0 10px 10px 10px;
+  padding: 8px 10px;
+  background: #eef6ff;
+  border: 1px solid #003366;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.share-url-input {
+  flex: 1 1 280px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid #000000;
+  background: #ffffff;
+}
+
+/* ============================================================================
+ * Blueprint Engineering Sheet (Exported to PDF & Printed)
+ * ============================================================================ */
+
+.blueprint-sheet {
+  background: var(--bg-sheet);
+  border: 2px solid #000000;
+  padding: 14px;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.2);
+}
+
+.spec-title-block {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+  border: 2px solid #000000;
+}
+
+.spec-title-block td,
+.spec-title-block th {
+  border: 1px solid #000000;
+  padding: 5px 8px;
+  vertical-align: middle;
+}
+
+.spec-cell-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: #334155;
+  background: var(--bg-blueprint-tint);
+  display: block;
+  margin-bottom: 2px;
+  letter-spacing: 0.5px;
+}
+
+.spec-title-cell {
+  background: #f8fafc;
+}
+
+.spec-recipe-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: bold;
+  color: #000000;
+  font-family: var(--font-ui);
+}
+
+.spec-recipe-desc {
+  margin-top: 3px;
+  font-size: 12px;
+  color: #333333;
+}
+
+.spec-mono-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.spec-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.spec-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: #eef2f7;
+  border: 1px solid #334155;
+  padding: 1px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.spec-chip.temp {
+  background: #fff1f2;
+  border-color: #9f1239;
+  color: #881337;
+  font-weight: bold;
+}
+
+.spec-chip-remove {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #7f1d1d;
+  padding: 0 2px;
+}
+
+/* ============================================================================
+ * Classic Nested TRN Dependency Table & Row-per-Step Summary Table
+ * ============================================================================ */
+
+.trn-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.trn-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 2px solid #000000;
+  table-layout: auto;
+  font-size: 12px;
+}
+
+.trn-table th {
+  background: #003366;
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 6px 8px;
+  border: 1px solid #000000;
+  text-align: left;
+}
+
+.trn-table td {
+  border: 1px solid #000000;
+  padding: 5px 7px;
+  vertical-align: middle;
+}
+
+.trn-qty-cell {
+  font-family: var(--font-mono);
+  font-weight: bold;
+  text-align: right;
+  white-space: nowrap;
+  width: 68px;
+  background: #f8fafc;
+}
+
+.trn-unit-cell {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  width: 58px;
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.trn-ing-cell {
+  min-width: 190px;
+  background: #ffffff;
+}
+
+.trn-ing-name {
+  font-weight: bold;
+}
+
+.trn-prep-note {
+  font-size: 11px;
+  color: #475569;
+  margin-left: 4px;
+}
+
+.divided-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: bold;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #b45309;
+  padding: 0 4px;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+.trn-row-tools-col {
+  width: 82px;
+  white-space: nowrap;
+  background: #f1f5f9;
+  text-align: center;
+}
+
+.trn-action-cell {
+  background: #f4f7fb;
+  vertical-align: middle;
+  min-width: 155px;
+  max-width: 280px;
+  transition: background-color 0.12s ease;
+}
+
+.trn-action-cell.final-node {
+  background: #e2ecf8;
+  border-left: 2px solid #003366;
+}
+
+.trn-action-cell:hover {
+  background: var(--bg-cell-hover);
+}
+
+.trn-action-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.trn-verb-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: bold;
+  background: #003366;
+  color: #ffffff;
+  padding: 1px 5px;
+  letter-spacing: 0.4px;
+}
+
+.trn-step-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #334155;
+  font-weight: bold;
+}
+
+.trn-action-text {
+  font-size: 12px;
+  line-height: 1.35;
+  color: #0f172a;
+}
+
+.trn-action-params {
+  margin-top: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.param-pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 0 4px;
+  border: 1px solid #64748b;
+  background: #ffffff;
+  color: #1e293b;
+}
+
+.param-pill.temp {
+  border-color: #9f1239;
+  color: #881337;
+  background: #fff1f2;
+}
+
+.trn-output-tag {
+  margin-top: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: bold;
+  color: #003366;
+  border-top: 1px dashed #94a3b8;
+  padding-top: 3px;
+}
+
+.trn-passthrough-cell {
+  background: repeating-linear-gradient(
+    90deg,
+    #ffffff,
+    #ffffff 6px,
+    #eef2f6 6px,
+    #eef2f6 10px
+  );
+  text-align: center;
+  color: #64748b;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  min-width: 44px;
+}
+
+/* Inline editable focus */
+[contenteditable='true']:focus {
+  outline: 2px solid #003366;
+  background: var(--bg-cell-edit);
+}
+
+/* Kitchen Bench Mode interactive checkoff styles */
+.bench-clickable {
+  cursor: pointer;
+}
+
+.trn-row-done td.trn-qty-cell,
+.trn-row-done td.trn-unit-cell,
+.trn-row-done td.trn-ing-cell,
+.trn-cell-done {
+  background: var(--bg-done) !important;
+  color: #64748b !important;
+  text-decoration: line-through;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(0, 0, 0, 0.03),
+    rgba(0, 0, 0, 0.03) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
+.done-stamp {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: bold;
+  background: #166534;
+  color: #ffffff;
+  padding: 1px 4px;
+  text-decoration: none !important;
+  display: inline-block;
+}
+
+.sheet-footer {
+  margin-top: 10px;
+  padding-top: 6px;
+  border-top: 1px solid #000000;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #475569;
+}
+
+/* ============================================================================
+ * Modal Dialog (Row Editor)
+ * ============================================================================ */
+
+.retro-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.retro-modal {
+  width: 100%;
+  max-width: 460px;
+}
+
+.modal-field {
+  margin-bottom: 10px;
+}
+
+.modal-field label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 3px;
+}
+
+.modal-field input,
+.modal-field select {
+  width: 100%;
+}
+
+/* ============================================================================
+ * PDF Export & Native Print Rules
+ * ============================================================================ */
+
+.pdf-exporting .no-export,
+.pdf-exporting .trn-row-tools-col {
+  display: none !important;
+}
+
+.pdf-exporting.blueprint-sheet {
+  box-shadow: none !important;
+  border: 1.5px solid #000000 !important;
+}
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 8mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    background-image: none !important;
+  }
+
+  .app-shell {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .no-print,
+  .no-export,
+  .trn-row-tools-col {
+    display: none !important;
+  }
+
+  .blueprint-sheet {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .trn-table {
+    font-size: 10.5px;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    padding: 0 6px;
+  }
+
+  .spec-recipe-title {
+    font-size: 16px;
+  }
+}

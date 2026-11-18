@@ -1,0 +1,34 @@
+{
+  // ============================================================================
+  // UnfluffRecipes - Zero-CLI Cloudflare Workers Git Integration Config
+  // ============================================================================
+  // Connect your GitHub repository directly in the Cloudflare Dashboard
+  // (Workers & Pages -> Create -> Import a repository).
+  // Cloudflare automatically builds `./dist` and deploys `src/worker/index.ts`.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "unfluff-recipes",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2025-02-14",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  // Workers AI binding for low-confidence or unstructured text fallback parsing.
+  "ai": {
+    "binding": "AI"
+  }
+  // Optional KV Namespace Binding for short-ID 14-day share permalinks:
+  // Do NOT hardcode a placeholder KV ID here—attach a KV namespace named
+  // `RECIPE_KV` in Cloudflare Dashboard -> Worker -> Settings -> Bindings.
+  // Shareable 14-day links work automatically via HMAC-signed URLs even before
+  // attaching RECIPE_KV.
+  // "kv_namespaces": [
+  //   {
+  //     "binding": "RECIPE_KV",
+  //     "id": "<created-in-cloudflare-dashboard>"
+  //   }
+  // ]
+}
