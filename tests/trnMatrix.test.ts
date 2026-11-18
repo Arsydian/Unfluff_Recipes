@@ -12,7 +12,49 @@ import {
   splitIngredientRowInDoc,
   type TrnGridMatrix,
 } from '../src/client/utils/trnMatrix';
-import { loadSamplePresetDocument } from '../src/client/utils/sampleRecipes';
+import {
+  buildTrnDocumentHeuristic,
+  extractRecipeFromRawText,
+} from '../src/worker/heuristicParser';
+
+const COOKIE_TEST_RECIPE = `Brown Butter Chocolate Chip Cookies
+Prep Time: 20 min
+Cook Time: 12 min
+Yield: 24 cookies
+
+Ingredients:
+- 1 cup unsalted butter
+- 2 1/4 cups all-purpose flour
+- 1 tsp baking soda
+- 1 tsp kosher salt, divided
+- 3/4 cup dark brown sugar
+- 1/2 cup granulated sugar
+- 2 large eggs
+- 1 1/2 cups dark chocolate chips
+
+Instructions:
+1. Melt the unsalted butter in a saucepan over medium heat until browned, 5 minutes.
+2. Meanwhile, in a separate bowl, whisk together the all-purpose flour, baking soda, and 1/2 tsp kosher salt.
+3. Beat brown sugar, granulated sugar, and eggs into the cooled brown butter.
+4. Fold dry ingredients into the butter mixture, then stir in dark chocolate chips.
+5. Sprinkle with remaining 1/2 tsp kosher salt and bake at 375°F for 10-12 minutes.`;
+
+const PANCAKE_TEST_RECIPE = `Buttermilk Pancakes
+Yield: 12 pancakes
+
+Ingredients:
+- 2 cups all-purpose flour
+- 2 tbsp granulated sugar
+- 2 tsp baking powder
+- 2 cups buttermilk
+- 2 large eggs
+- 4 tbsp unsalted butter, melted
+
+Instructions:
+1. Whisk flour, sugar, and baking powder in a mixing bowl.
+2. Meanwhile, in a separate bowl, whisk buttermilk, eggs, and melted butter.
+3. Stir wet ingredients into dry ingredients until just combined.
+4. Cook on a 350°F skillet 2-3 minutes per side.`;
 
 /**
  * Verifies the strict HTML table invariant: every coordinate (r, c) inside
@@ -50,13 +92,9 @@ function assertRectangularCoverage(matrix: TrnGridMatrix): void {
 }
 
 describe('buildTrnGridMatrix', () => {
-  it('generates a gap-free, non-overlapping matrix for all preset recipes', () => {
-    for (const presetId of [
-      'brown-butter-cookies',
-      'pan-seared-ribeye',
-      'buttermilk-pancakes',
-    ]) {
-      const doc = loadSamplePresetDocument(presetId);
+  it('generates a gap-free, non-overlapping matrix for multi-branch recipes', () => {
+    for (const rawText of [COOKIE_TEST_RECIPE, PANCAKE_TEST_RECIPE]) {
+      const doc = buildTrnDocumentHeuristic(extractRecipeFromRawText(rawText));
       const matrix = buildTrnGridMatrix(doc);
 
       expect(matrix.rowCount).toBe(doc.ingredients.length);
@@ -66,7 +104,7 @@ describe('buildTrnGridMatrix', () => {
   });
 
   it('maintains valid rectangular matrix after splitting, adding, and removing rows', () => {
-    let doc = loadSamplePresetDocument('buttermilk-pancakes');
+    let doc = buildTrnDocumentHeuristic(extractRecipeFromRawText(PANCAKE_TEST_RECIPE));
     const initialCount = doc.ingredients.length;
 
     doc = splitIngredientRowInDoc(doc, doc.ingredients[0].id);

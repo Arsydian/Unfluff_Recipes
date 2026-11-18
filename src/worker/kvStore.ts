@@ -77,14 +77,20 @@ function toBase64Url(bytes: Uint8Array): string {
 }
 
 /**
- * Decodes URL-safe Base64 into a Uint8Array.
+ * Decodes canonical URL-safe Base64 into a Uint8Array, rejecting non-canonical
+ * trailing padding bits to prevent malleable token encodings.
  */
 function fromBase64Url(encoded: string): Uint8Array {
-  const padded = encoded.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((encoded.length + 3) % 4);
+  const padded =
+    encoded.replace(/-/g, '+').replace(/_/g, '/') +
+    '==='.slice((encoded.length + 3) % 4);
   const binary = atob(padded);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) {
     bytes[i] = binary.charCodeAt(i);
+  }
+  if (toBase64Url(bytes) !== encoded) {
+    throw new Error('Non-canonical base64url token encoding.');
   }
   return bytes;
 }

@@ -37,7 +37,6 @@ import { RowEditModal } from './components/RowEditModal';
 import { SpecHeaderBlock } from './components/SpecHeaderBlock';
 import { StepSummaryTable } from './components/StepSummaryTable';
 import { exportRecipeToPdf, triggerNativePrint } from './utils/pdfExport';
-import { loadSamplePresetDocument } from './utils/sampleRecipes';
 import {
   moveIngredientRowInDoc,
   removeIngredientRowFromDoc,
@@ -65,17 +64,13 @@ function extractShareIdentifierFromLocation(): string | null {
 }
 
 export const App: React.FC = () => {
-  const [originalDoc, setOriginalDoc] = useState<TrnRecipeDocument | null>(() =>
-    extractShareIdentifierFromLocation() ? null : loadSamplePresetDocument('brown-butter-cookies')
-  );
-  const [doc, setDoc] = useState<TrnRecipeDocument | null>(() =>
-    extractShareIdentifierFromLocation() ? null : loadSamplePresetDocument('brown-butter-cookies')
-  );
+  const [originalDoc, setOriginalDoc] = useState<TrnRecipeDocument | null>(null);
+  const [doc, setDoc] = useState<TrnRecipeDocument | null>(null);
 
   const [viewMode, setViewMode] = useState<TrnViewMode>('nested');
   const [scaleFactor, setScaleFactor] = useState<number>(1);
   const [unitSystem, setUnitSystem] = useState<UnitSystem>('original');
-  const [inputCollapsed, setInputCollapsed] = useState<boolean>(true);
+  const [inputCollapsed, setInputCollapsed] = useState<boolean>(false);
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -135,6 +130,7 @@ export const App: React.FC = () => {
         setOriginalDoc(payload.document);
         setDoc(payload.document);
         setShareExpiresAt(payload.expiresAt || payload.document.metadata.expiresAt || null);
+        setInputCollapsed(true);
       })
       .catch(() => {
         setErrorMessage('Unable to fetch shared recipe specification.');
@@ -263,11 +259,6 @@ export const App: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleLoadPreset = (presetId: string) => {
-    const sample = loadSamplePresetDocument(presetId);
-    loadNewDocument(sample);
   };
 
   // ============================================================================
@@ -422,7 +413,6 @@ export const App: React.FC = () => {
         onCollapse={() => setInputCollapsed(true)}
         onParseUrl={handleParseUrl}
         onParseRawText={handleParseRawText}
-        onLoadPreset={handleLoadPreset}
       />
 
       {doc && (

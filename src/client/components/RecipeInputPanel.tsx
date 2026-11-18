@@ -2,16 +2,14 @@
  * ============================================================================
  * Collapsible Recipe Input Panel Component (Retro-Modern)
  * ----------------------------------------------------------------------------
- * Three-mode importer (URL Fetch, Paste Raw Text, Presets) that collapses into
- * a compact single-line preset switcher when a recipe sheet is active so the
- * TRN table stays front and center.
+ * Two-mode recipe importer (Recipe URL fetch & Paste Text) that collapses into
+ * a clean single-line action bar once a recipe sheet is active.
  * ============================================================================
  */
 
 import React, { useState } from 'react';
-import { SAMPLE_RECIPES } from '../utils/sampleRecipes';
 
-export type InputTabMode = 'url' | 'raw' | 'presets';
+export type InputTabMode = 'url' | 'raw';
 
 interface RecipeInputPanelProps {
   loading: boolean;
@@ -23,17 +21,10 @@ interface RecipeInputPanelProps {
   onCollapse: () => void;
   onParseUrl: (url: string, preferAi: boolean) => Promise<void>;
   onParseRawText: (rawText: string, preferAi: boolean) => Promise<void>;
-  onLoadPreset: (presetId: string) => void;
 }
 
-const PRESET_SHORT_LABELS: Record<string, string> = {
-  'brown-butter-cookies': 'Brown Butter Cookies',
-  'pan-seared-ribeye': 'Cast-Iron Ribeye',
-  'buttermilk-pancakes': 'Buttermilk Pancakes',
-};
-
 /**
- * Clean collapsible acquisition panel with segmented tab switching.
+ * Clean collapsible recipe acquisition panel with segmented URL / Paste Text tabs.
  */
 export const RecipeInputPanel: React.FC<RecipeInputPanelProps> = ({
   loading,
@@ -45,7 +36,6 @@ export const RecipeInputPanel: React.FC<RecipeInputPanelProps> = ({
   onCollapse,
   onParseUrl,
   onParseRawText,
-  onLoadPreset,
 }) => {
   const [activeTab, setActiveTab] = useState<InputTabMode>('url');
   const [urlInput, setUrlInput] = useState('');
@@ -66,7 +56,7 @@ export const RecipeInputPanel: React.FC<RecipeInputPanelProps> = ({
 
   if (isCollapsed && hasDocument && !errorMessage) {
     return (
-      <section className="retro-window no-print" aria-label="Quick Recipe Switcher">
+      <section className="retro-window no-print" aria-label="Quick Recipe Importer">
         <div className="collapsed-import-bar">
           <button
             type="button"
@@ -75,20 +65,9 @@ export const RecipeInputPanel: React.FC<RecipeInputPanelProps> = ({
           >
             Paste Recipe URL or Text
           </button>
-
-          <div className="collapsed-presets">
-            <span className="spec-strip-label">Samples:</span>
-            {SAMPLE_RECIPES.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                className="preset-pill"
-                onClick={() => onLoadPreset(preset.id)}
-              >
-                {PRESET_SHORT_LABELS[preset.id] || preset.label}
-              </button>
-            ))}
-          </div>
+          <span style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
+            Click any ingredient, instruction, or title below to edit inline before PDF export.
+          </span>
         </div>
         {warnings.length > 0 && (
           <div style={{ padding: '0 14px 10px 14px' }}>
@@ -125,15 +104,6 @@ export const RecipeInputPanel: React.FC<RecipeInputPanelProps> = ({
           >
             Paste Text
           </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'presets'}
-            className={`seg-btn ${activeTab === 'presets' ? 'active' : ''}`}
-            onClick={() => setActiveTab('presets')}
-          >
-            Samples
-          </button>
         </div>
 
         {hasDocument && (
@@ -154,7 +124,7 @@ export const RecipeInputPanel: React.FC<RecipeInputPanelProps> = ({
               <input
                 type="url"
                 className="retro-input"
-                placeholder="https://example.com/recipes/brown-butter-cookies"
+                placeholder="https://example.com/recipes/..."
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
                 required
@@ -188,7 +158,7 @@ export const RecipeInputPanel: React.FC<RecipeInputPanelProps> = ({
           <form onSubmit={handleRawSubmit}>
             <textarea
               className="retro-textarea"
-              placeholder={`Paste recipe title, ingredients, and steps here...\n\nExample:\nSkillet Garlic Butter Steak\nYield: 2 servings\nIngredients:\n- 1 lb ribeye steak\n- 4 tbsp butter, divided\nInstructions:\n1. Sear steak in 2 tbsp butter at 450°F until 130°F internal.\n2. Finish with remaining butter.`}
+              placeholder="Paste recipe title, ingredients, and instructions here..."
               value={rawTextInput}
               onChange={(e) => setRawTextInput(e.target.value)}
               required
@@ -212,22 +182,6 @@ export const RecipeInputPanel: React.FC<RecipeInputPanelProps> = ({
               </button>
             </div>
           </form>
-        )}
-
-        {activeTab === 'presets' && (
-          <div className="preset-grid">
-            {SAMPLE_RECIPES.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                className="preset-card"
-                onClick={() => onLoadPreset(preset.id)}
-              >
-                <div className="preset-card-title">{preset.label}</div>
-                <div className="preset-card-tag">{preset.tag}</div>
-              </button>
-            ))}
-          </div>
         )}
 
         {errorMessage && (

@@ -1,6 +1,6 @@
 # UnfluffRecipes — Tabular Recipe Notation (TRN) Compiler
 
-![Version](https://img.shields.io/badge/version-1.0.2-003366.svg)
+![Version](https://img.shields.io/badge/version-1.0.3-003366.svg)
 ![Cloudflare](https://img.shields.io/badge/deploy-Cloudflare%20Workers%20%2F%20Pages-F38020.svg)
 ![License](https://img.shields.io/badge/format-Tabular%20Recipe%20Notation-1b4d89.svg)
 
@@ -58,7 +58,7 @@ Your app works out of the box immediately after Step 2 (using heuristic parsing 
 
 ## Versioning & Project Structure
 
-- **Current Version:** `1.0.2` (synchronized across `package.json`, `src/shared/version.ts`, `README.md`, and `window.api.appVersion`).
+- **Current Version:** `1.0.3` (synchronized across `package.json`, `src/shared/version.ts`, `README.md`, and `window.api.appVersion`).
 - **Key Directories:**
   - `src/shared/` — Shared TypeScript TRN contracts & retention/version constants
   - `src/worker/` — Hono API, HTML recipe scraper, heuristic TRN compiler, Workers AI fallback, 14-day KV/token store
