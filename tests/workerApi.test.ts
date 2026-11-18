@@ -325,4 +325,36 @@ describe('Security Controls (SSRF, URI Sanitization, Payload Bounds, Headers)', 
     );
     expect(oversizedShareRes.status).toBe(413);
   });
+
+  it('always issues compact /r/<id> short URLs even without RECIPE_KV bound', async () => {
+    const parseRes = await app.fetch(
+      new Request('http://localhost/api/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rawText: 'Oatmeal\nIngredients:\n- 1 cup oats\nInstructions:\n1. Simmer oats in water.',
+        }),
+      }),
+      {}
+    );
+    const parsed = (await parseRes.json()) as { document: TrnRecipeDocument };
+
+    const shareRes = await app.fetch(
+      new Request('http://localhost/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ document: parsed.document }),
+      }),
+      {}
+    );
+    expect(shareRes.status).toBe(201);
+    const shareJson = (await shareRes.json()) as {
+      id: string;
+      sharePath: string;
+      storageMode: string;
+    };
+    expect(shareJson.sharePath).toBe(`/r/${shareJson.id}`);
+    expect(shareJson.id).toHaveLength(8);
+    expect(shareJson.storageMode).toBe('edge-cache');
+  });
 });

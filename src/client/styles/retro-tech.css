@@ -516,6 +516,7 @@ body {
  * ============================================================================ */
 
 .blueprint-sheet {
+  --trn-font-scale: 1;
   background: var(--bg-surface);
   border: 1px solid var(--border-ink);
   border-radius: var(--radius-md);
@@ -543,7 +544,7 @@ body {
 
 .spec-recipe-title {
   margin: 0;
-  font-size: 22px;
+  font-size: calc(22px * var(--trn-font-scale, 1));
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ink-primary);
@@ -552,7 +553,7 @@ body {
 
 .spec-recipe-desc {
   margin-top: 4px;
-  font-size: 13px;
+  font-size: calc(13px * var(--trn-font-scale, 1));
   color: var(--ink-secondary);
 }
 
@@ -575,7 +576,7 @@ body {
 .spec-kpi-label {
   display: block;
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: calc(9.5px * var(--trn-font-scale, 1));
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -584,7 +585,7 @@ body {
 
 .spec-kpi-value {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: calc(12px * var(--trn-font-scale, 1));
   font-weight: 700;
   color: var(--ink-primary);
 }
@@ -609,7 +610,7 @@ body {
 
 .spec-strip-label {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--trn-font-scale, 1));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -619,7 +620,7 @@ body {
 
 .spec-chip {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: calc(11px * var(--trn-font-scale, 1));
   background: var(--bg-subtle);
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-sm);
@@ -654,7 +655,7 @@ body {
 
 .spec-source-link {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: calc(11px * var(--trn-font-scale, 1));
   color: var(--ink-secondary);
   text-decoration: none;
   border-bottom: 1px dotted var(--ink-muted);
@@ -677,14 +678,14 @@ body {
   width: 100%;
   border-collapse: collapse;
   border: 1.5px solid var(--border-ink);
-  font-size: 13px;
+  font-size: calc(13px * var(--trn-font-scale, 1));
 }
 
 .trn-table th {
   background: var(--bg-accent);
   color: #ffffff;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--trn-font-scale, 1));
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -701,7 +702,7 @@ body {
 
 .trn-amount-cell {
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--trn-font-scale, 1));
   font-weight: 600;
   text-align: right;
   white-space: nowrap;
@@ -732,14 +733,14 @@ body {
 }
 
 .trn-prep-note {
-  font-size: 12px;
+  font-size: calc(12px * var(--trn-font-scale, 1));
   color: var(--ink-secondary);
 }
 
 .divided-badge {
   display: inline-block;
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: calc(9.5px * var(--trn-font-scale, 1));
   font-weight: 600;
   background: var(--signal-orange-soft);
   color: #9a3412;
@@ -798,7 +799,7 @@ tr:focus-within .row-hover-actions {
 
 .trn-verb-badge {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--trn-font-scale, 1));
   font-weight: 700;
   background: var(--bg-accent);
   color: #ffffff;
@@ -809,13 +810,13 @@ tr:focus-within .row-hover-actions {
 
 .trn-step-badge {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--trn-font-scale, 1));
   color: var(--ink-muted);
   font-weight: 600;
 }
 
 .trn-action-text {
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--trn-font-scale, 1));
   line-height: 1.42;
   color: var(--ink-primary);
 }
@@ -829,7 +830,7 @@ tr:focus-within .row-hover-actions {
 
 .param-pill {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: calc(10px * var(--trn-font-scale, 1));
   padding: 1px 5px;
   border: 1px solid var(--border-hairline);
   border-radius: 3px;
@@ -847,7 +848,7 @@ tr:focus-within .row-hover-actions {
 .trn-output-tag {
   margin-top: 6px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--trn-font-scale, 1));
   font-weight: 600;
   color: var(--ink-primary);
   border-top: 1px dashed var(--border-hairline);
@@ -859,7 +860,7 @@ tr:focus-within .row-hover-actions {
   text-align: center;
   color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: calc(11px * var(--trn-font-scale, 1));
   letter-spacing: -1px;
   min-width: 48px;
 }
@@ -905,7 +906,7 @@ tr:focus-within .row-hover-actions {
   flex-wrap: wrap;
   justify-content: space-between;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: calc(10.5px * var(--trn-font-scale, 1));
   color: var(--ink-muted);
 }
 
@@ -964,9 +965,13 @@ tr:focus-within .row-hover-actions {
   border: 1.5px solid #000000 !important;
 }
 
+.pdf-exporting .trn-table-scroll {
+  overflow: visible !important;
+}
+
 @media print {
   @page {
-    size: landscape;
+    size: letter landscape;
     margin: 8mm;
   }
 
@@ -993,8 +998,12 @@ tr:focus-within .row-hover-actions {
     padding: 0;
   }
 
+  .trn-table-scroll {
+    overflow: visible !important;
+  }
+
   .trn-table {
-    font-size: 11px;
+    font-size: calc(11px * var(--trn-font-scale, 1));
   }
 }
 

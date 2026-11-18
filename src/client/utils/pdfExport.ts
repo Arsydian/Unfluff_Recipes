@@ -56,6 +56,7 @@ export async function exportRecipeToPdf(
           useCORS: true,
           backgroundColor: '#ffffff',
           logging: false,
+          windowWidth: Math.max(element.scrollWidth, 1120),
         },
         jsPDF: {
           unit: 'mm',

@@ -70,6 +70,7 @@ export const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<TrnViewMode>('nested');
   const [scaleFactor, setScaleFactor] = useState<number>(1);
   const [unitSystem, setUnitSystem] = useState<UnitSystem>('original');
+  const [fontScale, setFontScale] = useState<number>(100);
   const [inputCollapsed, setInputCollapsed] = useState<boolean>(false);
 
   const [loading, setLoading] = useState(false);
@@ -384,11 +385,7 @@ export const App: React.FC = () => {
     if (!doc || !blueprintRef.current) return;
     setExportingPdf(true);
     try {
-      await exportRecipeToPdf(
-        blueprintRef.current,
-        doc,
-        viewMode === 'nested' ? 'landscape' : 'portrait'
-      );
+      await exportRecipeToPdf(blueprintRef.current, doc, 'landscape');
     } finally {
       setExportingPdf(false);
     }
@@ -424,6 +421,8 @@ export const App: React.FC = () => {
             onChangeScaleFactor={setScaleFactor}
             unitSystem={unitSystem}
             onChangeUnitSystem={setUnitSystem}
+            fontScale={fontScale}
+            onChangeFontScale={setFontScale}
             benchMode={benchMode}
             wakeLockStatus={wakeLockStatus}
             onToggleBenchMode={() => setBenchMode((b) => !b)}
@@ -445,7 +444,11 @@ export const App: React.FC = () => {
             onPrintBlueprint={triggerNativePrint}
           />
 
-          <main ref={blueprintRef} className="blueprint-sheet">
+          <main
+            ref={blueprintRef}
+            className="blueprint-sheet"
+            style={{ '--trn-font-scale': fontScale / 100 } as React.CSSProperties}
+          >
             <SpecHeaderBlock
               document={doc}
               scaleFactor={scaleFactor}

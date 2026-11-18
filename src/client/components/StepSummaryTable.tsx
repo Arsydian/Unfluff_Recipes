@@ -116,7 +116,7 @@ export const StepSummaryTable: React.FC<StepSummaryTableProps> = ({
                   )}
                 </td>
 
-                <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5 }}>
+                <td style={{ fontFamily: 'var(--font-mono)', fontSize: 'calc(11.5px * var(--trn-font-scale, 1))' }}>
                   {liveIngredientsText}
                 </td>
 
@@ -137,7 +137,7 @@ export const StepSummaryTable: React.FC<StepSummaryTableProps> = ({
                 </td>
 
                 <td
-                  style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5 }}
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: 'calc(11.5px * var(--trn-font-scale, 1))' }}
                   contentEditable={!benchMode}
                   suppressContentEditableWarning
                   onClick={(e) => {

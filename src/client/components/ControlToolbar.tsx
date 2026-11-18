@@ -17,6 +17,8 @@ interface ControlToolbarProps {
   onChangeScaleFactor: (factor: number) => void;
   unitSystem: UnitSystem;
   onChangeUnitSystem: (system: UnitSystem) => void;
+  fontScale: number;
+  onChangeFontScale: (percent: number) => void;
   benchMode: boolean;
   wakeLockStatus: 'off' | 'active' | 'unsupported';
   onToggleBenchMode: () => void;
@@ -41,6 +43,8 @@ export const ControlToolbar: React.FC<ControlToolbarProps> = ({
   onChangeScaleFactor,
   unitSystem,
   onChangeUnitSystem,
+  fontScale,
+  onChangeFontScale,
   benchMode,
   wakeLockStatus,
   onToggleBenchMode,
@@ -138,6 +142,36 @@ export const ControlToolbar: React.FC<ControlToolbarProps> = ({
               onClick={() => onChangeUnitSystem('imperial')}
             >
               Imperial
+            </button>
+          </div>
+
+          <div className="segmented-control" aria-label="Font Size">
+            <button
+              type="button"
+              className="seg-btn"
+              onClick={() => onChangeFontScale(Math.max(75, fontScale - 10))}
+              disabled={fontScale <= 75}
+              title="Decrease sheet font size"
+            >
+              A−
+            </button>
+            <button
+              type="button"
+              className="seg-btn"
+              onClick={() => onChangeFontScale(100)}
+              title="Reset font size to 100%"
+              style={{ fontFamily: 'var(--font-mono)', minWidth: 46 }}
+            >
+              {fontScale}%
+            </button>
+            <button
+              type="button"
+              className="seg-btn"
+              onClick={() => onChangeFontScale(Math.min(135, fontScale + 10))}
+              disabled={fontScale >= 135}
+              title="Increase sheet font size"
+            >
+              A+
             </button>
           </div>
         </div>

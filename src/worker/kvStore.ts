@@ -135,16 +135,80 @@ export function sanitizeDocumentSourceUrl(doc: TrnRecipeDocument): TrnRecipeDocu
   };
 }
 
+/**
+ * Stores an envelope in Cloudflare's Edge Cache API (`caches.default`) when
+ * running on Cloudflare Workers/Pages so short `/r/:id` links survive across
+ * isolates even before `RECIPE_KV` is bound.
+ */
+async function putEdgeCacheEnvelope(id: string, serialized: string): Promise<boolean> {
+  try {
+    const cacheStorage = (
+      globalThis as unknown as { caches?: { default?: Cache } }
+    ).caches;
+    const edgeCache = cacheStorage?.default;
+    if (!edgeCache) return false;
+
+    const cacheReq = new Request(`https://share-cache.unfluff.internal/trn/${id}`);
+    const cacheRes = new Response(serialized, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': `public, max-age=${SHARE_TTL_SECONDS}`,
+      },
+    });
+    await edgeCache.put(cacheReq, cacheRes);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reads a stored envelope from Cloudflare's Edge Cache API (`caches.default`).
+ */
+async function getEdgeCacheEnvelope(id: string): Promise<string | null> {
+  try {
+    const cacheStorage = (
+      globalThis as unknown as { caches?: { default?: Cache } }
+    ).caches;
+    const edgeCache = cacheStorage?.default;
+    if (!edgeCache) return null;
+
+    const matched = await edgeCache.match(
+      new Request(`https://share-cache.unfluff.internal/trn/${id}`)
+    );
+    return matched ? await matched.text() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Deletes an expired envelope from Cloudflare's Edge Cache API.
+ */
+async function deleteEdgeCacheEnvelope(id: string): Promise<void> {
+  try {
+    const cacheStorage = (
+      globalThis as unknown as { caches?: { default?: Cache } }
+    ).caches;
+    await cacheStorage?.default?.delete(
+      new Request(`https://share-cache.unfluff.internal/trn/${id}`)
+    );
+  } catch {
+    // Ignore cache cleanup errors
+  }
+}
+
 // ============================================================================
 // Public Save & Load API (Enforces 14-Day TTL)
 // ============================================================================
 
 /**
- * Saves a TRN recipe specification for exactly 2 weeks (14 days / 1,209,600s).
+ * Saves a TRN recipe specification for exactly 2 weeks (14 days / 1,209,600s)
+ * and always issues a short `/r/<id>` permalink.
  *
  * @param doc - Compiled and optionally user-edited TrnRecipeDocument.
  * @param env - Optional Cloudflare Worker environment containing `RECIPE_KV`.
- * @returns Share metadata including short ID, signed token, and expiration ISO timestamp.
+ * @returns Share metadata including short ID, short `/r/:id` path, and expiration ISO timestamp.
  */
 export async function saveSharedRecipe(
   doc: TrnRecipeDocument,
@@ -155,7 +219,7 @@ export async function saveSharedRecipe(
   sharePath: string;
   expiresAt: string;
   ttlSeconds: number;
-  storageMode: 'kv' | 'signed-token';
+  storageMode: 'kv' | 'edge-cache';
 }> {
   const nowMs = Date.now();
   const expiresAtMs = nowMs + SHARE_TTL_MS;
@@ -180,7 +244,7 @@ export async function saveSharedRecipe(
 
   const serialized = JSON.stringify(envelope);
 
-  // Persist to Cloudflare KV with native 14-day expirationTtl when bound
+  // Layer 1: Persist to Cloudflare KV with native 14-day expirationTtl when bound
   let usedKv = false;
   if (env?.RECIPE_KV) {
     await env.RECIPE_KV.put(`trn:${id}`, serialized, {
@@ -189,14 +253,19 @@ export async function saveSharedRecipe(
     usedKv = true;
   }
 
-  // Also cache in bounded isolate memory for immediate readback
+  // Layer 2: Persist in Cloudflare Edge Cache (14-day max-age) for zero-KV deployments
+  if (!usedKv) {
+    await putEdgeCacheEnvelope(id, serialized);
+  }
+
+  // Layer 3: Cache in bounded isolate memory for local dev & immediate readback
   if (memoryStore.size >= MAX_MEMORY_ENTRIES) {
     const oldestKey = memoryStore.keys().next().value;
     if (oldestKey) memoryStore.delete(oldestKey);
   }
   memoryStore.set(id, envelope);
 
-  // Produce a signed portable token verifying integrity + 14-day expiry
+  // Produce a signed verification token for programmatic callers/tests
   const payloadBytes = new TextEncoder().encode(serialized);
   const payloadB64 = toBase64Url(payloadBytes);
   const hmacKey = await getHmacKey(env);
@@ -211,10 +280,10 @@ export async function saveSharedRecipe(
   return {
     id,
     token,
-    sharePath: usedKv ? `/r/${id}` : `?r=${token}`,
+    sharePath: `/r/${id}`,
     expiresAt,
     ttlSeconds: SHARE_TTL_SECONDS,
-    storageMode: usedKv ? 'kv' : 'signed-token',
+    storageMode: usedKv ? 'kv' : 'edge-cache',
   };
 }
 
@@ -280,10 +349,13 @@ export async function loadSharedRecipe(
     }
   }
 
-  // Case 2: Short ID lookup in Cloudflare KV or isolate memory
+  // Case 2: Short ID lookup in Cloudflare KV, Edge Cache, or isolate memory
   let rawJson: string | null = null;
   if (env?.RECIPE_KV) {
     rawJson = await env.RECIPE_KV.get(`trn:${trimmed}`);
+  }
+  if (!rawJson) {
+    rawJson = await getEdgeCacheEnvelope(trimmed);
   }
 
   let envelope: StoredRecipeEnvelope | null = null;
@@ -301,12 +373,13 @@ export async function loadSharedRecipe(
     return { document: null, expired: false };
   }
 
-  // Enforce strict 14-day timestamp validation even before background KV sweep
+  // Enforce strict 14-day timestamp validation even before background KV/cache sweep
   if (Date.now() > envelope.expiresAtMs) {
     memoryStore.delete(trimmed);
     if (env?.RECIPE_KV) {
       await env.RECIPE_KV.delete(`trn:${trimmed}`);
     }
+    await deleteEdgeCacheEnvelope(trimmed);
     return {
       document: null,
       expired: true,

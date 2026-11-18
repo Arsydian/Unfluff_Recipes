@@ -216,7 +216,7 @@ export interface ShareRecipeResponse {
   sharePath?: string;
   expiresAt?: string;
   ttlSeconds?: number;
-  storageMode?: 'kv' | 'signed-token';
+  storageMode?: 'kv' | 'edge-cache';
   error?: string;
 }
 
