@@ -40,7 +40,6 @@ export const HeaderSpecBar: React.FC<HeaderSpecBarProps> = ({
         <span className="retro-logo-mark">TRN</span>
         <div>
           <span className="header-title">UnfluffRecipes</span>
-          <span className="header-subtitle">Tabular Recipe Notation</span>
         </div>
       </div>
 

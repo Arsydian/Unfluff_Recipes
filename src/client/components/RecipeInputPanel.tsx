@@ -135,7 +135,7 @@ export const RecipeInputPanel: React.FC<RecipeInputPanelProps> = ({
                 className="retro-btn primary"
                 disabled={loading}
               >
-                {loading ? 'Compiling...' : 'Convert to TRN'}
+                {loading ? 'Compiling...' : 'Unfluff Recipe'}
               </button>
             </div>
             <div className="input-footer-row">

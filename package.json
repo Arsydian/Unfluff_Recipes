@@ -1,6 +1,6 @@
 {
   "name": "unfluff-recipes",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "description": "Cloudflare-hosted engineering recipe compiler converting recipe URLs and raw text into Tabular Recipe Notation (TRN) with PDF export and 14-day shareable links.",
   "type": "module",
