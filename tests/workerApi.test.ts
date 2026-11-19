@@ -9,6 +9,7 @@ import type { KVNamespaceBinding, TrnRecipeDocument, WorkerEnv } from '../src/sh
 import { APP_VERSION, SHARE_TTL_SECONDS } from '../src/shared/version';
 import { app } from '../src/worker/index';
 import {
+  clearScraperCacheForTests,
   extractRecipeFromHtml,
   fetchAndExtractRecipe,
   validatePublicRecipeUrl,
@@ -52,6 +53,76 @@ describe('HTML Scraper (JSON-LD & Microdata)', () => {
     expect(extracted.cookTime).toBe('10 min');
     expect(extracted.rawIngredients).toHaveLength(3);
     expect(extracted.rawInstructions).toHaveLength(2);
+  });
+
+  it('extracts multi-component Substack blog recipes while ignoring essay preamble and comments', () => {
+    const html = `
+      <!doctype html>
+      <html>
+        <head>
+          <title>A Pumpkin Pie Even I Can Love - by Sohla El-Waylly</title>
+          <script type="application/ld+json">
+            { "@context": "https://schema.org", "@type": "NewsArticle", "headline": "A Pumpkin Pie Even I Can Love" }
+          </script>
+        </head>
+        <body>
+          <h1 class="pub-headings">Hot Dish with Sohla</h1>
+          <article class="post">
+            <h1 class="post-title">A Pumpkin Pie Even I Can Love</h1>
+            <div class="body markup">
+              <p>Long story about why I usually skip pumpkin pie at Thanksgiving.</p>
+              <div class="subscribe-widget"><button>Subscribe</button></div>
+              <h1>A Very Good &amp; Very Easy Pumpkin Pie Recipe</h1>
+              <p>Gingersnap crust and salty cream cheese whip.</p>
+              <div><hr></div>
+              <h5>For the crust:</h5>
+              <ul>
+                <li><p>170g ginger snaps (about 1 1/2 c crumbs)</p></li>
+                <li><p>25g (2 tbsp) granulated sugar</p></li>
+                <li><p>1/2 tsp fine salt</p></li>
+                <li><p>56g (4 tbsp) unsalted butter, melted</p></li>
+              </ul>
+              <h5>For the filling:</h5>
+              <ul>
+                <li><p>1 (15-oz) can pumpkin puree</p></li>
+                <li><p>1/2 tsp fine salt</p></li>
+                <li><p>4 tbsp unsalted butter</p></li>
+                <li><p>1 1/2 tbsp pumpkin pie spice</p></li>
+              </ul>
+              <h5>For the topping:</h5>
+              <ul>
+                <li><p>6 oz softened cream cheese</p></li>
+                <li><p>2 tbsp granulated sugar</p></li>
+                <li><p>1/4 to 1/2 tsp fine salt (Taste it!)</p></li>
+                <li><p>1 1/2 c heavy whipping cream</p></li>
+              </ul>
+              <div><hr></div>
+              <p><strong>Make the crust:</strong> Heat the oven to 325F. Process gingersnaps, sugar, and salt, then drizzle in melted butter.</p>
+              <p>(Alternatively, smash in a bag with a rolling pin.)</p>
+              <p>Bake until lightly browned, about 20 minutes.</p>
+              <p><strong>Make the filling:</strong> Whisk pumpkin puree and salt in a bowl.</p>
+              <p>Melt butter in a small saucepan and add the spices for 30 seconds. Scrape into filling.</p>
+              <p><strong>For the cream:</strong> Stir cream cheese, sugar, and 1/4 teaspoon salt, then add remaining cream and whip.</p>
+              <p class="button-wrapper"><a href="#comments">Leave a comment</a></p>
+            </div>
+          </article>
+          <div class="comments-page"><h4>Discussion about this post</h4><p>Great recipe!</p></div>
+        </body>
+      </html>
+    `;
+
+    const extracted = extractRecipeFromHtml(
+      html,
+      'https://sohla.substack.com/p/a-pumpkin-pie-even-i-can-love'
+    );
+    expect(extracted.extractionMethod).toBe('html-heuristic');
+    expect(extracted.title).toBe('A Very Good & Very Easy Pumpkin Pie Recipe');
+    expect(extracted.description).toContain('Gingersnap crust');
+    expect(extracted.rawIngredients).toHaveLength(12);
+    expect(extracted.rawInstructions).toHaveLength(5);
+    expect(extracted.rawInstructions[0]).toContain('(Alternatively, smash in a bag');
+    expect(extracted.rawInstructions.join(' ')).not.toContain('Leave a comment');
+    expect(extracted.rawInstructions.join(' ')).not.toContain('Great recipe');
   });
 });
 
@@ -116,6 +187,74 @@ describe('Worker Hono API (/api/health, /api/parse, /api/share)', () => {
     expect(json.ok).toBe(true);
     expect(json.document.title).toBe('AI Refined Omelette');
     expect(json.document.ingredients).toHaveLength(3);
+  });
+
+  it('accepts pre-parsed Workers AI object payloads with step verbs/outputLabels and warns when preferAi lacks AI binding', async () => {
+    const objectAiMock = {
+      run: vi.fn().mockResolvedValue({
+        response: {
+          title: 'Workers AI Pumpkin Pie',
+          steps: [
+            {
+              instruction: 'Process gingersnaps, sugar, salt, and melted butter into crust crumbs.',
+              verb: 'PROCESS',
+              outputLabel: 'Crust Crumbs',
+            },
+            {
+              instruction: 'Bake crust at 325F for 20 minutes.',
+              verb: 'BAKE',
+              outputLabel: 'FINISHED DISH',
+            },
+          ],
+          ingredients: [
+            { line: '170g ginger snaps', stepIndex: 0 },
+            { line: '56g unsalted butter, melted', stepIndex: 0 },
+          ],
+        },
+      }),
+    };
+
+    const resWithAi = await app.fetch(
+      new Request('http://localhost/api/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rawText: 'Pie\nIngredients:\n- 170g ginger snaps\nInstructions:\n1. Bake crust.',
+          preferAi: true,
+        }),
+      }),
+      { AI: objectAiMock }
+    );
+    expect(resWithAi.status).toBe(200);
+    const aiPayload = (await resWithAi.json()) as {
+      ok: boolean;
+      document: TrnRecipeDocument;
+    };
+    expect(aiPayload.ok).toBe(true);
+    expect(aiPayload.document.title).toBe('Workers AI Pumpkin Pie');
+    expect(aiPayload.document.metadata.parserEngine).toBe('workers-ai');
+    expect(aiPayload.document.actions[0].verb).toBe('PROCESS');
+    expect(aiPayload.document.actions[0].outputLabel).toBe('Crust Crumbs');
+
+    // Request with preferAi=true when AI binding is absent should surface a clear warning
+    const resNoAi = await app.fetch(
+      new Request('http://localhost/api/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rawText: 'Toast\nIngredients:\n- 2 slices bread\nInstructions:\n1. Toast bread.',
+          preferAi: true,
+        }),
+      }),
+      {}
+    );
+    expect(resNoAi.status).toBe(200);
+    const noAiPayload = (await resNoAi.json()) as {
+      ok: boolean;
+      warnings?: string[];
+    };
+    expect(noAiPayload.ok).toBe(true);
+    expect(noAiPayload.warnings?.[0]).toContain('Workers AI binding (AI) is not attached');
   });
 
   it('POST /api/share saves to RECIPE_KV with exact 14-day TTL and rejects expired links after 2 weeks', async () => {
@@ -223,6 +362,56 @@ describe('Security Controls (SSRF, URI Sanitization, Payload Bounds, Headers)', 
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    clearScraperCacheForTests();
+  });
+
+  it('recovers from HTTP 429 on Substack post pages via /api/v1/posts/<slug> and caches the result', async () => {
+    const requestedUrls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const target = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      requestedUrls.push(target);
+
+      if (target === 'https://sohla.substack.com/p/a-pumpkin-pie-even-i-can-love') {
+        return new Response('Too Many Requests', { status: 429 });
+      }
+      if (target === 'https://sohla.substack.com/api/v1/posts/a-pumpkin-pie-even-i-can-love') {
+        return new Response(
+          JSON.stringify({
+            title: 'A Pumpkin Pie Even I Can Love',
+            subtitle: 'Salty cream cheese whip',
+            body_html: `
+              <h1>A Very Good &amp; Very Easy Pumpkin Pie Recipe</h1>
+              <h5>For the crust:</h5>
+              <ul>
+                <li><p>170g ginger snaps</p></li>
+                <li><p>56g unsalted butter, melted</p></li>
+              </ul>
+              <p><strong>Make the crust:</strong> Process gingersnaps and melted butter, then bake at 325F for 20 minutes.</p>
+            `,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      return new Response('Not found', { status: 404 });
+    }) as typeof fetch;
+
+    const first = await fetchAndExtractRecipe(
+      'https://sohla.substack.com/p/a-pumpkin-pie-even-i-can-love'
+    );
+    expect(first.title).toBe('A Very Good & Very Easy Pumpkin Pie Recipe');
+    expect(first.rawIngredients).toHaveLength(2);
+    expect(first.rawInstructions).toHaveLength(1);
+    expect(requestedUrls).toEqual([
+      'https://sohla.substack.com/p/a-pumpkin-pie-even-i-can-love',
+      'https://sohla.substack.com/api/v1/posts/a-pumpkin-pie-even-i-can-love',
+    ]);
+
+    // Second fetch uses TTL cache without making additional network requests
+    const second = await fetchAndExtractRecipe(
+      'https://sohla.substack.com/p/a-pumpkin-pie-even-i-can-love'
+    );
+    expect(second.title).toBe('A Very Good & Very Easy Pumpkin Pie Recipe');
+    expect(requestedUrls).toHaveLength(2);
   });
 
   it('blocks private, loopback, CGNAT, credentialed, and IPv6 redirect SSRF targets', async () => {

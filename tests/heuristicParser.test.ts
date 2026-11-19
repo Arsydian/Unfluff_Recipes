@@ -38,6 +38,85 @@ describe('parseIngredientLine', () => {
     expect(row.rawQuantity).toBe('to taste');
     expect(row.name.toLowerCase()).toContain('kosher salt');
   });
+
+  it('parses attached metric quantities and leading state modifiers', () => {
+    const snaps = parseIngredientLine('170g ginger snaps (about 1 1/2 c crumbs)', 0);
+    expect(snaps.quantity).toBe(170);
+    expect(snaps.unit).toBe('g');
+    expect(snaps.name).toBe('ginger snaps');
+    expect(snaps.prepNote).toBe('about 1 1/2 c crumbs');
+
+    const sugar = parseIngredientLine('25g (2 tbsp) granulated sugar', 1);
+    expect(sugar.quantity).toBe(25);
+    expect(sugar.unit).toBe('g');
+    expect(sugar.name).toBe('granulated sugar');
+    expect(sugar.prepNote).toBe('2 tbsp');
+
+    const butter = parseIngredientLine('56g (4 tbsp) unsalted butter, melted', 2);
+    expect(butter.quantity).toBe(56);
+    expect(butter.unit).toBe('g');
+    expect(butter.name).toBe('unsalted butter');
+    expect(butter.prepNote).toContain('melted');
+
+    const cheese = parseIngredientLine('6 oz softened cream cheese', 3);
+    expect(cheese.quantity).toBe(6);
+    expect(cheese.unit).toBe('oz');
+    expect(cheese.name).toBe('cream cheese');
+    expect(cheese.prepNote).toBe('softened');
+  });
+});
+
+describe('Multi-Component & Compound Ingredient Matching', () => {
+  it('pins repeated multi-component ingredients to their respective steps and matches compound nouns', () => {
+    const doc = buildTrnDocumentHeuristic({
+      title: 'Pumpkin Pie',
+      servings: 8,
+      yieldLabel: '1 pie',
+      extractionMethod: 'html-heuristic',
+      rawIngredients: [
+        '170g ginger snaps (about 1 1/2 c crumbs)',
+        '25g (2 tbsp) granulated sugar',
+        '1/2 tsp fine salt',
+        '56g (4 tbsp) unsalted butter, melted',
+        '1 (15-oz) can pumpkin puree',
+        '1/2 tsp fine salt',
+        '4 tbsp unsalted butter',
+        '1 1/2 tbsp pumpkin pie spice',
+        '6 oz softened cream cheese',
+        '2 tbsp granulated sugar',
+        '1/4 to 1/2 tsp fine salt',
+        '1 1/2 c heavy whipping cream',
+      ],
+      rawInstructions: [
+        'Make the crust: Combine gingersnaps, sugar, and salt, then drizzle in melted butter.',
+        'Bake crust at 325F for 20 minutes.',
+        'Make the filling: Whisk pumpkin puree and salt in a bowl.',
+        'Melt the butter in a saucepan and add the spices for 30 seconds.',
+        'For the cream: Stir together cream cheese, sugar, and 1/4 teaspoon salt, then add remaining cream and whip.',
+      ],
+    });
+
+    const saltRows = doc.ingredients.filter((i) => i.name === 'fine salt');
+    expect(saltRows).toHaveLength(3);
+    expect(saltRows.map((r) => r.firstUsedStepIndex)).toEqual([0, 2, 4]);
+
+    const sugarRows = doc.ingredients.filter((i) => i.name === 'granulated sugar');
+    expect(sugarRows).toHaveLength(2);
+    expect(sugarRows.map((r) => r.firstUsedStepIndex)).toEqual([0, 4]);
+
+    const butterRows = doc.ingredients.filter((i) => i.name === 'unsalted butter');
+    expect(butterRows).toHaveLength(2);
+    expect(butterRows.map((r) => r.firstUsedStepIndex)).toEqual([0, 3]);
+
+    const snaps = doc.ingredients.find((i) => i.name === 'ginger snaps');
+    expect(snaps?.firstUsedStepIndex).toBe(0);
+
+    const spice = doc.ingredients.find((i) => i.name === 'pumpkin pie spice');
+    expect(spice?.firstUsedStepIndex).toBe(3);
+
+    const cream = doc.ingredients.find((i) => i.name === 'heavy whipping cream');
+    expect(cream?.firstUsedStepIndex).toBe(4);
+  });
 });
 
 describe('Automatic Divided Ingredient Row Splitting', () => {

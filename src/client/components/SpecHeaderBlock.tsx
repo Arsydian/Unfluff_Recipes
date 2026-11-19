@@ -129,6 +129,16 @@ export const SpecHeaderBlock: React.FC<SpecHeaderBlockProps> = ({
             <span className="spec-kpi-label">SPEC ID</span>
             <span className="spec-kpi-value">{metadata.docNumber}</span>
           </div>
+          <div className="spec-kpi-item">
+            <span className="spec-kpi-label">COMPILER</span>
+            <span className="spec-kpi-value">
+              {metadata.parserEngine === 'workers-ai'
+                ? 'WORKERS AI'
+                : metadata.parserEngine === 'hybrid'
+                  ? 'HYBRID AI'
+                  : 'HEURISTIC'}
+            </span>
+          </div>
         </div>
       </div>
 

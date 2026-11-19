@@ -115,10 +115,14 @@ app.post('/api/parse', async (c) => {
     // Step 1: Deterministic heuristic compilation + divided-ingredient splitting
     let trnDoc = buildTrnDocumentHeuristic(rawRecipe);
 
-    // Step 2: Optional Workers AI fallback when confidence is low
+    // Step 2: Optional Workers AI fallback when confidence is low or user-requested
     if (shouldTriggerAiFallback(trnDoc, body.preferAi)) {
       if (c.env?.AI) {
-        trnDoc = await parseWithWorkersAiFallback(rawRecipe, trnDoc, c.env);
+        trnDoc = await parseWithWorkersAiFallback(rawRecipe, trnDoc, c.env, warnings);
+      } else if (body.preferAi) {
+        warnings.push(
+          'AI Assist was enabled, but the Cloudflare Workers AI binding (AI) is not attached in this environment. Compiled using deterministic heuristic parser.'
+        );
       } else if (trnDoc.metadata.confidenceScore < 0.55) {
         warnings.push(
           'Low heuristic confidence and Workers AI binding is not enabled; review ingredient mappings inline before PDF export.'

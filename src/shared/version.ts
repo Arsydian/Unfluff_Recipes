@@ -9,7 +9,7 @@
  */
 
 /** Current semantic build version (must match package.json "version"). */
-export const APP_VERSION = '1.0.5';
+export const APP_VERSION = '1.0.7';
 
 /** Engineering designation displayed in spec headers and printed footers. */
 export const APP_CODENAME = 'TRN-SPEC-REV1';

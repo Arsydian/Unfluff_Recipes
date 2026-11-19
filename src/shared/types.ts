@@ -185,6 +185,8 @@ export interface ExtractedRawRecipe {
   yieldLabel: string;
   rawIngredients: string[];
   rawInstructions: string[];
+  /** Clean newline-delimited excerpt of article/recipe body for Workers AI fallback. */
+  rawBodyExcerpt?: string;
   extractionMethod: 'json-ld' | 'microdata' | 'html-heuristic' | 'raw-text';
 }
 

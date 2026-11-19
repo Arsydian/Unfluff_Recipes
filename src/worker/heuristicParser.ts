@@ -233,6 +233,8 @@ const COLLECTIVE_GROUPS: Array<{ trigger: RegExp; memberKeywords: string[] }> = 
     memberKeywords: [
       'salt',
       'pepper',
+      'spice',
+      'spices',
       'paprika',
       'cumin',
       'oregano',
@@ -244,6 +246,10 @@ const COLLECTIVE_GROUPS: Array<{ trigger: RegExp; memberKeywords: string[] }> = 
       'turmeric',
       'cinnamon',
       'nutmeg',
+      'ginger',
+      'clove',
+      'allspice',
+      'cardamom',
     ],
   },
   {
@@ -304,6 +310,11 @@ const MATCH_STOPWORDS = new Set([
   'light',
   'dark',
   'pure',
+  'fine',
+  'coarse',
+  'flaky',
+  'kosher',
+  'sea',
   'divided',
   'optional',
   'taste',
@@ -391,8 +402,10 @@ export function extractRecipeFromRawText(rawText: string): ExtractedRawRecipe {
   let currentSection: Section = 'preamble';
 
   // Heuristic pattern to distinguish an ingredient line when no section headers exist.
-  const ingredientLikeRegex =
-    /^(?:[-*•☐]\s*)?(?:\d+[\d\s/.-]*|[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])/u;
+  const autoIngredientRegex =
+    /^(?:[-*•☐]\s*)?(?:(?:\d+\s+\d+\/\d+)|(?:\d+\/\d+)|(?:\d+(?:\.\d+)?)|[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])(?:\s*(?:-|–|to)\s*(?:(?:\d+\s+\d+\/\d+)|(?:\d+\/\d+)|(?:\d+(?:\.\d+)?)|[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]))?\s*(?:g|kg|mg|oz|fl\.?\s*oz|lb|lbs|ml|l|cups?|c|tbsp|tbs|tsp|teaspoons?|tablespoons?|cans?|cloves?|pinch(?:es)?|dash(?:es)?|slices?|pieces?|heads?|stalks?|sheets?|strips?|drops?|sticks?|pkg|packages?|bunches?|sprigs?|large|medium|small|\(\d)/iu;
+  const bulletedIngredientRegex =
+    /^[-*•☐]\s+(?:\d+[\d\s/.-]*|[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])/u;
 
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
@@ -439,14 +452,26 @@ export function extractRecipeFromRawText(rawText: string): ExtractedRawRecipe {
         continue;
       }
 
-      // First non-metadata line becomes the title unless it already looks like a measurement
-      if (i === 0 && !ingredientLikeRegex.test(line)) {
+      const looksLikeAutoIngredient =
+        line.length <= 120 &&
+        !/^\d{4}\b/.test(line) &&
+        !/^\d+[.)]\s+[A-Z]/.test(line) &&
+        (autoIngredientRegex.test(line) || bulletedIngredientRegex.test(line));
+
+      // Enter ingredients mode on "For the <component>:" subheader if next line looks like an ingredient
+      if (/^for\s+the\s+[\w\s&-]+:$/i.test(line)) {
+        currentSection = 'ingredients';
+        continue;
+      }
+
+      // First non-metadata line becomes the title unless it already looks like an ingredient
+      if (i === 0 && !looksLikeAutoIngredient) {
         title = line.replace(/^#+\s*/, '').trim();
         continue;
       }
 
-      // Auto-enter ingredients mode if lines begin with amounts
-      if (ingredientLikeRegex.test(line)) {
+      // Auto-enter ingredients mode only on confident ingredient lines
+      if (looksLikeAutoIngredient) {
         currentSection = 'ingredients';
       } else {
         continue;
@@ -461,10 +486,15 @@ export function extractRecipeFromRawText(rawText: string): ExtractedRawRecipe {
     const strippedBullet = line.replace(/^[-*•☐]\s*/, '').trim();
 
     if (currentSection === 'ingredients') {
-      // Detect accidental transition into numbered instructions without a header
+      // Detect transition into numbered instructions or inline section steps without a header
       const looksLikeNumberedStep =
         /^(?:step\s*\d+[:.)]?|\d+[.)]\s+[A-Z])/i.test(line) && line.length > 35;
-      if (looksLikeNumberedStep) {
+      const looksLikeInlineStepHeader =
+        /^(?:make|to make|prepare|bake|assemble|cook|for the (?:cream|assembly|sauce|glaze|finishing))[^:]{0,35}:\s+\S/i.test(
+          line
+        ) && line.length > 35;
+
+      if (looksLikeNumberedStep || looksLikeInlineStepHeader) {
         currentSection = 'instructions';
         rawInstructions.push(line.replace(/^(?:step\s*\d+[:.)]?\s*|\d+[.)]\s*)/i, '').trim());
       } else if (!/^for\s+the\s+.+:$/i.test(strippedBullet)) {
@@ -570,12 +600,12 @@ export function parseIngredientLine(rawLine: string, index: number): IngredientR
   let quantityMax: number | null = null;
   let rawQuantity = '';
 
-  // Match range quantities like "2-3", "2 to 3", "1/2 - 3/4"
+  // Match range quantities like "2-3", "2 to 3", "1/2 - 3/4" (including attached units like "170g")
   const rangePattern =
-    /^((?:\d+\s+\d+\/\d+)|(?:\d+\/\d+)|(?:\d+(?:\.\d+)?))\s*(?:-|–|to)\s*((?:\d+\s+\d+\/\d+)|(?:\d+\/\d+)|(?:\d+(?:\.\d+)?))\b\s*(.*)$/i;
-  // Match single quantities like "1 1/2", "3/4", "2.5", "2"
+    /^((?:\d+\s+\d+\/\d+)|(?:\d+\/\d+)|(?:\d+(?:\.\d+)?))\s*(?:-|–|to)\s*((?:\d+\s+\d+\/\d+)|(?:\d+\/\d+)|(?:\d+(?:\.\d+)?))(?=\s|$|[a-zA-Z(])\s*(.*)$/i;
+  // Match single quantities like "1 1/2", "3/4", "2.5", "2", or "170g"
   const singlePattern =
-    /^((?:\d+\s+\d+\/\d+)|(?:\d+\/\d+)|(?:\d+(?:\.\d+)?))\b\s*(.*)$/;
+    /^((?:\d+\s+\d+\/\d+)|(?:\d+\/\d+)|(?:\d+(?:\.\d+)?))(?=\s|$|[a-zA-Z(])\s*(.*)$/;
 
   const rangeMatch = remainder.match(rangePattern);
   if (rangeMatch) {
@@ -649,6 +679,18 @@ export function parseIngredientLine(rawLine: string, index: number): IngredientR
     }
   }
 
+  // Extract leading state modifiers directly before the core noun (e.g., "softened cream cheese")
+  const leadingStateMatch = name.match(
+    /^(softened|melted|chilled|room[- ]temperature|sifted|beaten|whisked|crushed)\s+(.+)$/i
+  );
+  if (leadingStateMatch && leadingStateMatch[2].trim().length >= 3) {
+    const stateNote = leadingStateMatch[1].toLowerCase().replace(/\s+/g, ' ');
+    name = leadingStateMatch[2].trim();
+    if (!prepNotes.some((n) => n.toLowerCase().includes(stateNote))) {
+      prepNotes.push(stateNote);
+    }
+  }
+
   return {
     id: `ing-${index + 1}`,
     quantity,
@@ -667,15 +709,31 @@ export function parseIngredientLine(rawLine: string, index: number): IngredientR
 // ============================================================================
 
 /**
- * Extracts normalized content keywords from an ingredient name for matching
- * against instruction sentences.
+ * Extracts normalized base tokens from an ingredient name (in order).
  */
-function extractIngredientKeywords(ingredientName: string): string[] {
-  const tokens = ingredientName
+function extractBaseIngredientTokens(ingredientName: string): string[] {
+  return ingredientName
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, ' ')
     .split(/\s+/)
     .filter((tok) => tok.length >= 3 && !MATCH_STOPWORDS.has(tok));
+}
+
+/**
+ * Normalizes an ingredient name into a canonical key for duplicate detection
+ * across multi-component recipes (e.g. "fine salt" in Crust & Filling).
+ */
+function normalizeIngredientKey(ingredientName: string): string {
+  const tokens = extractBaseIngredientTokens(ingredientName);
+  return tokens.join(' ') || ingredientName.toLowerCase().trim();
+}
+
+/**
+ * Extracts normalized content keywords (including singular stems and compound
+ * forms like "ginger snaps" -> "gingersnaps") for matching against steps.
+ */
+function extractIngredientKeywords(ingredientName: string): string[] {
+  const tokens = extractBaseIngredientTokens(ingredientName);
 
   const expanded = new Set<string>();
   for (const tok of tokens) {
@@ -690,38 +748,112 @@ function extractIngredientKeywords(ingredientName: string): string[] {
     }
   }
 
+  if (tokens.length >= 2) {
+    const joined = tokens.join('');
+    expanded.add(joined);
+    if (joined.endsWith('s') && joined.length > 4) {
+      expanded.add(joined.slice(0, -1));
+    }
+  }
+
   return Array.from(expanded);
 }
 
-/**
- * Checks whether an instruction step references a given ingredient either by
- * direct keyword match or via a collective category ("dry ingredients", etc.).
- */
-function stepMentionsIngredient(stepText: string, ingredient: IngredientRow): boolean {
-  const lowerStep = stepText.toLowerCase();
+function scoreTextAgainstIngredient(text: string, ingredient: IngredientRow): number {
+  const lowerStep = text.toLowerCase();
+  const compactStep = lowerStep.replace(/[\s-]+/g, '');
+  const baseTokens = extractBaseIngredientTokens(ingredient.name);
   const keywords = extractIngredientKeywords(ingredient.name);
 
-  if (keywords.length > 0) {
-    // Score full multi-word match or high-specificity single noun match
+  let score = 0;
+
+  // Full cleaned phrase match (e.g. "pumpkin pie spice", "cream cheese", "olive oil")
+  if (baseTokens.length >= 2) {
+    const phrase = baseTokens.join('\\s+');
+    if (new RegExp(`\\b${phrase}s?\\b`, 'i').test(lowerStep)) {
+      score += 10;
+    }
+    const compactPhrase = baseTokens.join('');
+    if (
+      compactPhrase.length >= 6 &&
+      new RegExp(`\\b${compactPhrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`, 'i').test(
+        lowerStep
+      )
+    ) {
+      score += 10;
+    }
+  }
+
+  // Head noun (final meaningful token, e.g. "spice" in "pumpkin pie spice")
+  const headToken = baseTokens[baseTokens.length - 1];
+  if (headToken) {
+    const headForms = extractIngredientKeywords(headToken);
+    const headHit = headForms.some((kw) =>
+      new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`, 'i').test(lowerStep)
+    );
+    if (headHit) {
+      const escHead = headToken.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const hasDirectAdditionCue = new RegExp(
+        `(?:\\b(?:tablespoons?|tbsp|teaspoons?|tsp|cups?|oz|grams?|ml|remaining|add(?:ing)?|stir\\s+in|pour\\s+in|whisk\\s+in)\\s+(?:of\\s+)?(?:the\\s+)?${escHead}s?\\b)`,
+        'i'
+      ).test(lowerStep);
+      score += baseTokens.length >= 2 ? (hasDirectAdditionCue ? 5 : 2) : 4;
+    }
+  }
+
+  // Individual keyword / stem / de-spaced match
+  if (score === 0 && keywords.length > 0) {
     for (const kw of keywords) {
       const regex = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`, 'i');
       if (regex.test(lowerStep)) {
-        return true;
+        score += 1;
+      } else if (kw.length >= 8 && compactStep.includes(kw)) {
+        score += 4;
       }
     }
   }
 
   // Collective category fallback ("dry ingredients", "wet ingredients", "spices")
-  const lowerIng = ingredient.name.toLowerCase();
-  for (const group of COLLECTIVE_GROUPS) {
-    if (group.trigger.test(lowerStep)) {
-      if (group.memberKeywords.some((mk) => lowerIng.includes(mk))) {
-        return true;
+  if (score === 0) {
+    const lowerIng = ingredient.name.toLowerCase();
+    for (const group of COLLECTIVE_GROUPS) {
+      if (group.trigger.test(lowerStep)) {
+        if (group.memberKeywords.some((mk) => lowerIng.includes(mk))) {
+          score += 3;
+          break;
+        }
       }
     }
   }
 
-  return false;
+  // Prep-state disambiguation bonus (e.g. "melted butter" vs "melt the butter")
+  if (score > 0 && ingredient.prepNote) {
+    const prepWords = ingredient.prepNote
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .filter((w) => w.length >= 4 && !/^(?:about|part|step)$/.test(w));
+    for (const pw of prepWords) {
+      if (new RegExp(`\\b${pw}\\b`, 'i').test(lowerStep)) {
+        score += 3;
+        break;
+      }
+    }
+  }
+
+  return score;
+}
+
+/**
+ * Scores how strongly an instruction step references an ingredient (0 = no match).
+ * Prioritizes main step instructions over parenthetical side-notes.
+ */
+function scoreStepIngredientMatch(stepText: string, ingredient: IngredientRow): number {
+  const mainText = stepText.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+  const mainScore = scoreTextAgainstIngredient(mainText, ingredient);
+  if (mainScore > 0) return mainScore;
+
+  const fullScore = scoreTextAgainstIngredient(stepText, ingredient);
+  return fullScore > 0 ? Math.max(1, Math.floor(fullScore / 2)) : 0;
 }
 
 // ============================================================================
@@ -748,16 +880,32 @@ export function splitDividedIngredients(
     return ingredients;
   }
 
+  // Count repeated ingredient names across multi-component recipes so already-separated
+  // rows (e.g. "fine salt" listed in crust, filling, and topping) are not split again.
+  const nameCounts = new Map<string, number>();
+  for (const ing of ingredients) {
+    const key = normalizeIngredientKey(ing.name);
+    nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
+  }
+
   const result: IngredientRow[] = [];
 
   for (const row of ingredients) {
     const isExplicitlyDivided =
       /\bdivided\b/i.test(row.prepNote) || /\bdivided\b/i.test(row.name);
+    const key = normalizeIngredientKey(row.name);
+    const isAlreadyRepeatedComponent = (nameCounts.get(key) || 0) >= 2;
 
-    // Find all steps that reference this ingredient
+    if (isAlreadyRepeatedComponent && !isExplicitlyDivided) {
+      result.push(row);
+      continue;
+    }
+
+    // Find all steps that reference this ingredient meaningfully
     const matchingStepIndices: number[] = [];
     for (let s = 0; s < instructions.length; s += 1) {
-      if (stepMentionsIngredient(instructions[s], row)) {
+      const score = scoreStepIngredientMatch(instructions[s], row);
+      if (isExplicitlyDivided ? score > 0 : score >= 4) {
         matchingStepIndices.push(s);
       }
     }
@@ -779,11 +927,20 @@ export function splitDividedIngredients(
     }
 
     // Check implicit split cues when not marked "divided" (e.g., "half of the butter ... remaining butter")
+    const keywords = extractIngredientKeywords(row.name);
     const hasSplitCue =
+      !isExplicitlyDivided &&
       matchingStepIndices.length >= 2 &&
-      matchingStepIndices.some((sIdx) =>
-        /\b(?:half|remaining|rest of|reserve|set aside|first|second)\b/i.test(instructions[sIdx])
-      );
+      matchingStepIndices.some((sIdx) => {
+        const stepLower = instructions[sIdx].toLowerCase();
+        return keywords.some((kw) => {
+          const esc = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          return (
+            new RegExp(`\\b(?:half(?:\\s+of)?|remaining|rest\\s+of|reserve|set\\s+aside)\\b[^.;]{0,40}\\b${esc}s?\\b`, 'i').test(stepLower) ||
+            new RegExp(`\\b${esc}s?\\b[^.;]{0,30}\\b(?:remaining|set\\s+aside|reserved)\\b`, 'i').test(stepLower)
+          );
+        });
+      });
 
     if ((!isExplicitlyDivided && !hasSplitCue) || matchingStepIndices.length < 2) {
       result.push(row);
@@ -1005,15 +1162,30 @@ export function extractHardwareAndTemps(instructions: string[]): {
  * Extracts a crisp uppercase engineering verb from the beginning of a step.
  */
 function extractLeadVerb(instruction: string): string {
-  const upper = instruction.toUpperCase();
-  // Check first 40 characters for a known cooking verb
-  const prefix = upper.slice(0, 48);
+  // Strip leading component labels like "Make the crust:" or "For the cream:" (keep verb labels like "Bake:")
+  const withoutLabel = instruction
+    .replace(/^(?:for|make|to make)\s+the\s+[^:]{1,28}:\s*/i, '')
+    .trim();
+  const target = withoutLabel || instruction;
+  const firstWord = target.trim().split(/\s+/)[0]?.replace(/[^a-zA-Z]/g, '').toUpperCase();
+  if (firstWord && COOKING_VERBS.includes(firstWord)) {
+    return firstWord;
+  }
+
+  const firstSentence = target.split(/[.!?]/)[0] || target;
+  const prefix = firstSentence.toUpperCase().slice(0, 48);
+
+  let bestVerb = '';
+  let bestPos = Infinity;
   for (const verb of COOKING_VERBS) {
-    if (new RegExp(`\\b${verb}\\b`).test(prefix)) {
-      return verb;
+    const pos = prefix.search(new RegExp(`\\b${verb}\\b`));
+    if (pos !== -1 && pos < bestPos) {
+      bestPos = pos;
+      bestVerb = verb;
     }
   }
-  const firstWord = instruction.trim().split(/\s+/)[0]?.replace(/[^a-zA-Z]/g, '').toUpperCase();
+  if (bestVerb) return bestVerb;
+
   return firstWord && firstWord.length >= 2 ? firstWord : 'PROCESS';
 }
 
@@ -1023,6 +1195,14 @@ function extractLeadVerb(instruction: string): string {
 function inferOutputLabel(stepText: string, stepNumber: number, isFinal: boolean): string {
   if (isFinal) return 'FINISHED DISH';
   const lower = stepText.toLowerCase();
+  if (/\bpour in the filling\b|\bbake until\b/i.test(lower)) return 'Baked Pie';
+  if (/^cool\b|^chill\b/i.test(lower)) return 'Cooled Pie';
+  if (/\bfor the cream\b|\bwhip\b.*\bsoft peaks\b|\bcream cheese\b/i.test(lower)) return 'Cream Topping';
+  if (/\bmelt\b.*\bbutter\b.*\bspices?\b|\bbloom\b/i.test(lower)) return 'Spiced Butter';
+  if (/\bcrust\b|\bcrumb mixture\b|\bgingersnaps?\b/i.test(lower)) {
+    return /\bbake\b/i.test(lower) ? 'Baked Crust' : 'Crust Base';
+  }
+  if (/\bfilling\b|\bpumpkin puree\b.*\bdulce de leche\b|\bcustard\b/i.test(lower)) return 'Filling Mix';
   if (/\bdry ingredients\b|\bflour\b.*\bsalt\b/i.test(lower)) return 'Dry Mix';
   if (/\bcreamed?\b|\bbutter\b.*\bsugar\b/i.test(lower)) return 'Creamed Base';
   if (/\bbatter\b/i.test(lower)) return 'Batter';
@@ -1070,24 +1250,44 @@ export function buildTrnDocumentHeuristic(raw: ExtractedRawRecipe): TrnRecipeDoc
   // 2. Automatically split "divided" ingredients into separate step-pinned rows
   const splitIngredients = splitDividedIngredients(parsedIngredients, instructions);
 
-  // 3. Pin every non-split ingredient to its earliest consuming step index
+  // 3. Pin every non-split ingredient to its best/earliest consuming step index,
+  //    advancing downstream when the same ingredient appears across multiple components.
   let matchedCount = 0;
+  const lastStepByIngredientKey = new Map<string, number>();
+
   for (const ing of splitIngredients) {
     if (ing.isDividedSplit) {
       matchedCount += 1;
       continue;
     }
 
+    const ingKey = normalizeIngredientKey(ing.name);
+    const prevStep = lastStepByIngredientKey.get(ingKey);
+    const searchStart = prevStep !== undefined ? prevStep + 1 : 0;
+
     let foundStep = -1;
-    for (let s = 0; s < instructions.length; s += 1) {
-      if (stepMentionsIngredient(instructions[s], ing)) {
+    let bestScore = 0;
+    for (let s = searchStart; s < instructions.length; s += 1) {
+      const score = scoreStepIngredientMatch(instructions[s], ing);
+      if (score > bestScore) {
+        bestScore = score;
         foundStep = s;
-        break;
+      }
+    }
+
+    if (foundStep === -1 && searchStart > 0) {
+      for (let s = 0; s < instructions.length; s += 1) {
+        const score = scoreStepIngredientMatch(instructions[s], ing);
+        if (score > bestScore) {
+          bestScore = score;
+          foundStep = s;
+        }
       }
     }
 
     if (foundStep >= 0) {
       ing.firstUsedStepIndex = foundStep;
+      lastStepByIngredientKey.set(ingKey, foundStep);
       matchedCount += 1;
     } else {
       // Garnish or finishing items attach to the last step; others attach to Step 1
@@ -1220,7 +1420,7 @@ export function buildContiguousTrnGraph(
       Boolean(newSlice) &&
       activeClusters.length > 0 &&
       !isLastStep &&
-      /\b(?:meanwhile|in a (?:separate|second|small|large|another) (?:bowl|pan|pot|skillet)|for the (?:sauce|glaze|topping|filling|frosting))\b/i.test(
+      /\b(?:meanwhile|in a (?:separate|second|small|large|another) (?:bowl|pan|pot|skillet)|(?:for|make) the (?:sauce|glaze|topping|filling|frosting|cream|crust))\b/i.test(
         stepText
       );
 
@@ -1311,7 +1511,15 @@ export function buildContiguousTrnGraph(
     );
 
     const verb = extractLeadVerb(stepText);
-    const outputLabel = inferOutputLabel(stepText, s + 1, isLastStep);
+    let outputLabel = inferOutputLabel(stepText, s + 1, isLastStep);
+    if (
+      outputLabel.startsWith('Sub-Assembly #') &&
+      absorbedClusters.length === 1 &&
+      absorbedClusters[0].node.outputLabel === 'Crust Base' &&
+      /\bbake\b/i.test(stepText)
+    ) {
+      outputLabel = 'Baked Crust';
+    }
 
     const node: TrnActionNode = {
       id: `act-${s + 1}`,
